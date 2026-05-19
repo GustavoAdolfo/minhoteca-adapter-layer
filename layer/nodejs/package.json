@@ -1,0 +1,47 @@
+{
+  "name": "@gustavoadolfo/minhoteca-adapter-layer",
+  "description": "Camada de adaptadores, repositórios, proxies e outros padrões para solução de demandas do projeto Minhoteca.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc && tsc-alias",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "test:watch": "jest --watch",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "lint:staged": "lint-staged",
+    "format": "prettier --write \"**/*.{js,ts,md,json,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{js,ts,md,json,yml,yaml}\""
+  },
+  "keywords": [
+    "minhoteca",
+    "biblioteca",
+    "comunidade"
+  ],
+  "author": "Gustavo Adolfo",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GustavoAdolfo/minhoteca-adapter-layer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/GustavoAdolfo/minhoteca-adapter-layer/issues"
+  },
+  "homepage": "https://github.com/GustavoAdolfo/minhoteca-adapter-layer#readme",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "dependencies": {
+    "winston": "^3.19.0",
+    "winston-cloudwatch": "^6.3.0"
+  }
+}
