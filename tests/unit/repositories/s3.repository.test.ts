@@ -87,6 +87,12 @@ describe('S3Repository', () => {
       expect(result).toBeNull();
     });
 
+    it('deve retornar null se o Body do objeto for undefined', async () => {
+      mockSend.mockResolvedValueOnce({});
+      const result = await repository.getDataFromS3File('bucket', 'empty.txt');
+      expect(result).toBeNull();
+    });
+
     it('deve retornar o texto bruto se a extensão for .txt', async () => {
       mockSend.mockResolvedValueOnce({
         Body: { transformToString: jest.fn().mockResolvedValueOnce('Texto bruto') },
@@ -126,6 +132,12 @@ describe('S3Repository', () => {
       });
       const result = await repository.getTextFileFromS3File('bucket', 'teste.txt');
       expect(result).toBe('Conteúdo S3');
+    });
+
+    it('deve retornar undefined se o Body do objeto for undefined', async () => {
+      mockSend.mockResolvedValueOnce({});
+      const result = await repository.getTextFileFromS3File('bucket', 'teste.txt');
+      expect(result).toBeUndefined();
     });
 
     it('deve lançar erro em caso de falha na SDK do S3', async () => {

@@ -15,9 +15,11 @@ import {
 import { unmarshall } from '@aws-sdk/util-dynamodb';
 import { SERVICE_TYPE, createClient } from '../factories/aws-client.factory';
 import { KeyValueAttr, RepositoryInterface, ResultType } from '../interfaces';
+import { LogService } from '@gustavoadolfo/minhoteca-core-layer';
 
 export class DynamoDBRepository implements RepositoryInterface {
   private client: DynamoDBDocumentClient;
+  private logService = new LogService('MongoDBRepository');
 
   constructor() {
     this.client = DynamoDBDocumentClient.from(
@@ -41,12 +43,16 @@ export class DynamoDBRepository implements RepositoryInterface {
     );
   }
 
-  async updateByMinhotecaId(tableName: string, data: unknown, id: string): Promise<ResultType> {
+  async updateByMinhotecaId(
+    tableName: string,
+    data: Record<string, unknown>,
+    id: string
+  ): Promise<ResultType> {
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
       throw new Error('Parâmetro data deve ser um objeto com campos a serem atualizados');
     }
 
-    const updateData = data as Record<string, unknown>;
+    const updateData = data;
     const keys = Object.keys(updateData).filter((key) => key !== 'id');
 
     if (keys.length === 0) {
@@ -135,7 +141,6 @@ export class DynamoDBRepository implements RepositoryInterface {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   findByMinhotecaId(collectionName: string, id: string): Promise<ResultType> {
     return this.queryData(collectionName, [
       {
@@ -150,10 +155,10 @@ export class DynamoDBRepository implements RepositoryInterface {
     ]);
   }
 
-  saveData = async (tableName: string, itemData: unknown): Promise<ResultType> => {
+  saveData = async (tableName: string, itemData: Record<string, unknown>): Promise<ResultType> => {
     const command = new PutCommand({
       TableName: tableName,
-      Item: itemData as Record<string, unknown>,
+      Item: itemData,
     });
     const result = await this.client.send(command);
     return {
@@ -167,12 +172,18 @@ export class DynamoDBRepository implements RepositoryInterface {
     };
   };
 
-  getData = async <T>(
+  getData = async (
     tableName: string,
     hashKey: { name: string; type: string; value: string },
     sortKey?: { name: string; type: string; value: string } | undefined
   ): Promise<ResultType> => {
-    const attributes: unknown[] = [
+    const attributes: Array<{
+      attributeName: string;
+      attributeType: string;
+      attributeValue: string;
+      partitionKey: boolean;
+      sortKey: boolean;
+    }> = [
       {
         attributeName: hashKey.name,
         attributeType: hashKey.type.toUpperCase(),
@@ -196,7 +207,7 @@ export class DynamoDBRepository implements RepositoryInterface {
     const attributesNames: Record<string, string> = {};
     const keyConditions: string[] = [];
 
-    attributes.forEach((attrib: any) => {
+    attributes.forEach((attrib) => {
       const { attributeName, attributeType, attributeValue } = attrib;
 
       expressionAttributes[`:${attributeName}`] = {
@@ -221,7 +232,7 @@ export class DynamoDBRepository implements RepositoryInterface {
       const content: QueryOutput = await this.client.send(cmd);
       const result = (content.Items ?? []).map((item) => unmarshall(item));
       return {
-        data: result as T[],
+        data: result as [],
         currentPage: 1,
         totalPages: 1,
         totalDocuments: result.length,
@@ -236,7 +247,7 @@ export class DynamoDBRepository implements RepositoryInterface {
     }
   };
 
-  queryData = async <T>(tableName: string, params: KeyValueAttr[]): Promise<ResultType> => {
+  queryData = async (tableName: string, params: KeyValueAttr[]): Promise<ResultType> => {
     const invalidParams = params.some(
       (param: KeyValueAttr) => !param.attribute.AttributeName || !param.attribute.AttributeType
     );
@@ -248,7 +259,7 @@ export class DynamoDBRepository implements RepositoryInterface {
     const pk = params.find((p) => p.partitionKey);
     if (pk) {
       const sk = params.find((p) => p.sortKey);
-      const result = await this.getData<T>(
+      const result = await this.getData(
         tableName,
         {
           name: pk.attribute.AttributeName ?? '',
@@ -336,7 +347,7 @@ export class DynamoDBRepository implements RepositoryInterface {
       }
 
       // Consultar itens que serão removidos
-      const items = await this.queryData<unknown>(tableName, attributes);
+      const items = await this.queryData(tableName, attributes);
 
       if (items.data.length === 0) {
         return {

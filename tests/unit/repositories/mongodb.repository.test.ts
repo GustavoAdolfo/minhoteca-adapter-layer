@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { MongoClient } from 'mongodb';
 import { MongoDBRepository } from '../../../layer/nodejs/src/repositories/mongodb.repository';
 
@@ -211,35 +212,32 @@ describe('MongoDBRepository', () => {
       expect(instance1).toBe(instance2);
     });
 
-    it('deve inicializar e retornar a instância do banco através do getter mongodb', async () => {
-      // Forçamos a limpeza das variáveis internas para que a branch da linha 69 seja acionada obrigatoriamente
-      (repository as any).db = undefined;
-      (repository as any)._db = undefined;
-      (repository as any).client = mockClient; // Garante a integridade da comunicação
-
-      // Utilizamos await para prevenir problemas caso a inicialização ou o getter trabalhem com Promises
-      const db1 = await repository.mongodb;
-      const db2 = await repository.mongodb;
+    it('deve inicializar e retornar as configurações do banco através do getter mongodb', () => {
+      const db1 = repository.mongodb;
+      const db2 = repository.mongodb;
 
       expect(db1).toBeDefined();
-      // Utilizamos toEqual ao invés de toBe para prevenir quebras por referências de memória diferentes
       expect(db1).toEqual(db2);
     });
 
     it('deve lidar com falha na conexão inicial do MongoClient', async () => {
       mockClient.connect.mockRejectedValueOnce(new Error('Connection DB Error'));
-      (repository as any).db = undefined;
-      (repository as any)._db = undefined;
+      (repository as any).mongoClient = null;
 
-      await expect(repository.mongodb).rejects.toThrow();
+      await expect(repository.getAll('TestCollection')).rejects.toThrow('Connection DB Error');
     });
 
     it('deve lidar com falha no comando de ping/validação do DB', async () => {
       mockDb.command.mockRejectedValueOnce(new Error('Command DB Error'));
-      (repository as any).db = undefined;
-      (repository as any)._db = undefined;
+      (repository as any).mongoClient = mockClient;
 
-      await expect(repository.mongodb).rejects.toThrow();
+      mockCollection.toArray.mockResolvedValueOnce([]);
+      mockCollection.countDocuments.mockResolvedValueOnce(0);
+
+      await repository.getAll('TestCollection');
+
+      // Como o ping falhou, ele deve ter resetado o mongoClient para null e tentado reconectar logo em seguida
+      expect(mockClient.connect).toHaveBeenCalled();
     });
 
     it('deve lidar com erros em saveData', async () => {
@@ -317,6 +315,7 @@ describe('MongoDBRepository', () => {
       await expect(
         repository.queryData('TestCollection', [
           { attribute: { AttributeName: 'type' }, attributeValue: 'book' } as any,
+          { attribute: { AttributeName: 'status' }, attributeValue: 'active' } as any,
         ])
       ).rejects.toThrow();
     });
@@ -379,9 +378,10 @@ describe('MongoDBRepository', () => {
     it('deve fechar a conexão de forma síncrona no evento exit do processo (cobre #closeSync)', () => {
       const processOnSpy = jest.spyOn(process, 'on');
 
-      // Instanciamos um novo repositório para forçar o registro no process.on('exit')
-      const newRepo = new MongoDBRepository();
-      newRepo.mongoClient = mockClient;
+      // Instanciamos um novo repositório forçando a recriação (Singleton) para testar o registro no process.on('exit')
+      (MongoDBRepository as any).instance = null;
+      const newRepo = MongoDBRepository.getInstance();
+      (newRepo as any).mongoClient = mockClient;
 
       // Procuramos o callback registrado para o evento 'exit'
       const exitCall = processOnSpy.mock.calls.find((call) => call[0] === 'exit');
@@ -391,40 +391,40 @@ describe('MongoDBRepository', () => {
 
       // Executamos o callback (que internamente chama o método privado #closeSync)
       expect(() => exitCallback()).not.toThrow();
-      expect(newRepo.mongoClient).toBeNull();
+      expect((newRepo as any).mongoClient).toBeNull();
 
       processOnSpy.mockRestore();
     });
 
     it('deve fechar a conexão de forma assíncrona (closeConnection)', async () => {
-      repository.mongoClient = mockClient;
+      (repository as any).mongoClient = mockClient;
       await repository.closeConnection();
       expect(mockClient.close).toHaveBeenCalled();
-      expect(repository.mongoClient).toBeNull();
+      expect((repository as any).mongoClient).toBeNull();
     });
 
     it('deve lidar com erros ao fechar a conexão em closeConnection', async () => {
-      repository.mongoClient = mockClient;
+      (repository as any).mongoClient = mockClient;
       mockClient.close.mockRejectedValueOnce(new Error('Close Error'));
       await repository.closeConnection();
       // A classe foi desenhada para absorver a exceção e forçar a deleção da variável da memória
-      expect(repository.mongoClient).toBeNull();
+      expect((repository as any).mongoClient).toBeNull();
     });
 
     it('não deve lançar erros no closeConnection se o client não estiver instanciado', async () => {
-      repository.mongoClient = null;
+      (repository as any).mongoClient = null;
       await expect(repository.closeConnection()).resolves.toBeUndefined();
     });
 
     it('deve lançar erro em validações de parâmetros vazios ou nulos', async () => {
       // Tenta cobrir cenários genéricos de throws e catches em validações comuns
       await expect(
-        repository.updateByMinhotecaId('TestCollection', null, 'test-id')
+        repository.updateByMinhotecaId('TestCollection', null as any, 'test-id')
       ).rejects.toThrow();
       await expect(
-        repository.updateByMinhotecaId('TestCollection', [], 'test-id')
+        repository.updateByMinhotecaId('TestCollection', [] as any, 'test-id')
       ).rejects.toThrow();
-      await expect(repository.saveData('TestCollection', null)).rejects.toThrow();
+      await expect(repository.saveData('TestCollection', null as any)).rejects.toThrow();
     });
   });
 
@@ -581,7 +581,9 @@ describe('MongoDBRepository', () => {
     describe('Branches de Fallbacks e Condicionais Adicionais', () => {
       it('deve formatar URI sem srv para clusters locais (branch isAtlas falso)', () => {
         process.env.MONGODB_CLUSTER = 'localhost:27017';
-        const config = repository.mongodb;
+        (MongoDBRepository as any).instance = null;
+        const repoLocal = MongoDBRepository.getInstance();
+        const config = repoLocal.mongoDBConfig;
         expect(config.uri).toBe(
           'mongodb://testuser:testpass@localhost:27017/?retryWrites=true&w=majority&appName=testapp'
         );

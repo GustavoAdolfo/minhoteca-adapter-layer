@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { MongoClient } from 'mongodb';
 import { KeyValueAttr, RepositoryInterface } from '../interfaces';
 import { ResultType } from '../interfaces/result.type';
@@ -160,7 +161,7 @@ export class MongoDBRepository implements RepositoryInterface {
     }
   }
 
-  async closeConnection() {
+  async closeConnection(): Promise<void> {
     if (this.mongoClient) {
       try {
         await this.mongoClient.close();
@@ -173,7 +174,11 @@ export class MongoDBRepository implements RepositoryInterface {
     }
   }
 
-  async saveData(collectionName: string, data: any): Promise<ResultType> {
+  async saveData(collectionName: string, data: Record<string, unknown>): Promise<ResultType> {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      throw new Error('Parâmetro data deve ser um objeto');
+    }
+
     const client = await this.#getConnection();
 
     const db = client.db(this.mongoDBConfig.database);
@@ -197,8 +202,7 @@ export class MongoDBRepository implements RepositoryInterface {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async getData<T>(
+  async getData(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     tableName: string,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -209,8 +213,7 @@ export class MongoDBRepository implements RepositoryInterface {
     throw new Error('Method not implemented.');
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async queryData<T>(tableName: string, params: KeyValueAttr[]): Promise<ResultType> {
+  async queryData(tableName: string, params: KeyValueAttr[]): Promise<ResultType> {
     if (params.length === 0) {
       throw new Error('Parâmetros de consulta não definidos');
     }
@@ -254,7 +257,7 @@ export class MongoDBRepository implements RepositoryInterface {
     const db = client.db(this.mongoDBConfig.database);
     const collection = db.collection(tableName);
     try {
-      const query = attributes.reduce((acc: Record<string, any>, attr) => {
+      const query = attributes.reduce((acc: Record<string, unknown>, attr) => {
         if (attr?.attribute?.AttributeName) {
           acc[attr.attribute.AttributeName] = attr.attributeValue;
         }
@@ -285,7 +288,15 @@ export class MongoDBRepository implements RepositoryInterface {
     }
   }
 
-  async updateByMinhotecaId(collectionName: string, data: any, id: string): Promise<ResultType> {
+  async updateByMinhotecaId(
+    collectionName: string,
+    data: Record<string, unknown>,
+    id: string
+  ): Promise<ResultType> {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      throw new Error('Parâmetro data deve ser um objeto com campos a serem atualizados');
+    }
+
     const client = await this.#getConnection();
 
     const db = client.db(this.mongoDBConfig.database);
@@ -341,8 +352,7 @@ export class MongoDBRepository implements RepositoryInterface {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async getAll<T>(tableName: string, options: unknown = {}): Promise<ResultType> {
+  async getAll(tableName: string, options: unknown = {}): Promise<ResultType> {
     const client = await this.#getConnection();
     console.log('Consulta solicitada para getAll com opções:', options);
 
@@ -357,7 +367,7 @@ export class MongoDBRepository implements RepositoryInterface {
       // Conversão defensiva para garantir que o MongoDB driver receba números estritos
       const page = Number(Object.getOwnPropertyDescriptor(options, 'page')?.value ?? 0);
       const limit = Number(Object.getOwnPropertyDescriptor(options, 'limit')?.value ?? 0);
-      const sortOrder = Number(Object.getOwnPropertyDescriptor(options, 'sortOrder')?.value ?? 0);
+      const sortOrder = Object.getOwnPropertyDescriptor(options, 'sortOrder')?.value ?? 0;
       const skip = page > 0 ? (page - 1) * limit : 0;
       const hasFilter =
         !!filterKey && filterValue !== undefined && filterValue !== null && `${filterValue}` !== '';
@@ -398,14 +408,14 @@ export class MongoDBRepository implements RepositoryInterface {
         }
 
         // Normalizar direção para 1 ou -1, como exigido pelo driver do MongoDB
-        let direction = 1;
+        let direction: 1 | -1 = 1;
         const dirStr = String(finalSortOrder).toLowerCase();
         if (dirStr === '-1' || dirStr === 'desc' || dirStr === 'descending') {
           direction = -1;
         }
 
-        const sort: any = {};
-        sort[finalSortBy] = direction;
+        const sort: Record<string, 1 | -1> = {};
+        sort[String(finalSortBy)] = direction;
         query = query.sort(sort);
       }
 
@@ -435,7 +445,7 @@ export class MongoDBRepository implements RepositoryInterface {
     }
   }
 
-  async filterByField(collectionName: string, field: string, value: any): Promise<ResultType> {
+  async filterByField(collectionName: string, field: string, value: unknown): Promise<ResultType> {
     const client = await this.#getConnection();
 
     const db = client.db(this.mongoDBConfig.database);
@@ -459,7 +469,11 @@ export class MongoDBRepository implements RepositoryInterface {
     }
   }
 
-  async select(collectionName: string, query = {}, options: any = {}): Promise<ResultType> {
+  async select(
+    collectionName: string,
+    query: Record<string, unknown> = {},
+    options: { sortBy?: string; sortOrder?: string | number; projection?: unknown } = {}
+  ): Promise<ResultType> {
     const client = await this.#getConnection();
 
     const db = client.db(this.mongoDBConfig.database);
@@ -469,17 +483,17 @@ export class MongoDBRepository implements RepositoryInterface {
       const { sortBy, sortOrder = 1, projection } = options;
 
       // Configurar projeção se especificada
-      let findOptions: any = {};
+      const findOptions: { projection?: Record<string, number> } = {};
       if (projection) {
         if (Array.isArray(projection)) {
           // Se for array, converter para objeto com valores 1
           findOptions.projection = {};
           projection.forEach((field) => {
-            findOptions.projection[field] = 1;
+            findOptions.projection![String(field)] = 1;
           });
-        } else if (typeof projection === 'object') {
+        } else if (typeof projection === 'object' && projection !== null) {
           // Se for objeto, usar diretamente
-          findOptions.projection = projection;
+          findOptions.projection = projection as Record<string, number>;
         }
       }
 
@@ -495,18 +509,18 @@ export class MongoDBRepository implements RepositoryInterface {
           !validDirections.includes(String(finalSortOrder).toLowerCase()) &&
           validDirections.includes(String(finalSortBy).toLowerCase())
         ) {
-          finalSortBy = sortOrder;
+          finalSortBy = String(sortOrder);
           finalSortOrder = sortBy;
         }
 
-        let direction = 1;
+        let direction: 1 | -1 = 1;
         const dirStr = String(finalSortOrder).toLowerCase();
         if (dirStr === '-1' || dirStr === 'desc' || dirStr === 'descending') {
           direction = -1;
         }
 
-        const sort: any = {};
-        sort[finalSortBy] = direction;
+        const sort: Record<string, 1 | -1> = {};
+        sort[String(finalSortBy)] = direction;
         cursor = cursor.sort(sort);
       }
 
@@ -534,9 +548,9 @@ export class MongoDBRepository implements RepositoryInterface {
 
   async findWithProjection(
     collectionName: string,
-    query = {},
-    projection = {},
-    options: any = {}
+    query: Record<string, unknown> = {},
+    projection: unknown = {},
+    options: { page?: number; limit?: number; sortBy?: string; sortOrder?: string | number } = {}
   ): Promise<ResultType> {
     const client = await this.#getConnection();
 
@@ -548,17 +562,17 @@ export class MongoDBRepository implements RepositoryInterface {
       const skip = (page - 1) * limit;
 
       // Configurar projeção
-      let findOptions: any = {};
+      const findOptions: { projection?: Record<string, number> } = {};
       if (projection) {
         if (Array.isArray(projection)) {
           // Se for array, converter para objeto com valores 1
           findOptions.projection = {};
           projection.forEach((field) => {
-            findOptions.projection[field] = 1;
+            findOptions.projection![String(field)] = 1;
           });
-        } else if (typeof projection === 'object') {
+        } else if (typeof projection === 'object' && projection !== null) {
           // Se for objeto, usar diretamente
-          findOptions.projection = projection;
+          findOptions.projection = projection as Record<string, number>;
         }
       }
 
@@ -574,18 +588,18 @@ export class MongoDBRepository implements RepositoryInterface {
           !validDirections.includes(String(finalSortOrder).toLowerCase()) &&
           validDirections.includes(String(finalSortBy).toLowerCase())
         ) {
-          finalSortBy = sortOrder;
+          finalSortBy = String(sortOrder);
           finalSortOrder = sortBy;
         }
 
-        let direction = 1;
+        let direction: 1 | -1 = 1;
         const dirStr = String(finalSortOrder).toLowerCase();
         if (dirStr === '-1' || dirStr === 'desc' || dirStr === 'descending') {
           direction = -1;
         }
 
-        const sort: any = {};
-        sort[finalSortBy] = direction;
+        const sort: Record<string, 1 | -1> = {};
+        sort[String(finalSortBy)] = direction;
         cursor = cursor.sort(sort);
       }
 

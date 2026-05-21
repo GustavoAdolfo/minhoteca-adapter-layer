@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { jest, describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { DynamoDBRepository } from '../../../layer/nodejs/src/repositories/dynamodb.repository';
 import { KeyValueAttr } from '../../../layer/nodejs/src/interfaces';
@@ -46,7 +47,7 @@ describe('DynamoDBRepository', () => {
     repository = new DynamoDBRepository();
 
     const originalSaveData = repository.saveData;
-    repository.saveData = jest.fn(async (tableName: string, itemData: unknown) => {
+    repository.saveData = jest.fn(async (tableName: string, itemData: Record<string, unknown>) => {
       capturedSaveDataCalls.push({
         tableName,
         itemData: typeof itemData === 'object' && itemData !== null ? { ...itemData } : itemData,
@@ -147,10 +148,10 @@ describe('DynamoDBRepository', () => {
       })
     );
 
-    const result = await repository.queryData<unknown>(tableName, [attribute1]);
-    const data = (result as any).data !== undefined ? (result as any).data : result;
-    expect(data.length).toBeGreaterThanOrEqual(1);
-    expect(data[0]).toHaveProperty('id', itemId1);
+    const result = await repository.queryData(tableName, [attribute1]);
+    expect(result.data).toBeDefined();
+    expect(result.data.length).toBeGreaterThanOrEqual(1);
+    expect(result.data[0]).toHaveProperty('id', itemId1);
   });
 
   it('should retrieve all data from DynamoDB', async () => {
@@ -158,12 +159,10 @@ describe('DynamoDBRepository', () => {
     mockSend.mockImplementationOnce(() => Promise.resolve({ Items: [] }));
 
     const tableName = process.env.TEST_TABLE_NAME ?? 'TestTable';
-    const result = await repository.getAll<unknown>(tableName);
+    const result = await repository.getAll(tableName);
     expect(result).toBeDefined();
 
-    // Previne falhas independente da API já retornar `ResultType` (objeto com a chave data) ou não
-    const data = (result as any).data !== undefined ? (result as any).data : result;
-    expect(Array.isArray(data)).toBe(true);
+    expect(Array.isArray(result.data)).toBe(true);
   });
 
   describe('updateByMinhotecaId', () => {
@@ -189,10 +188,10 @@ describe('DynamoDBRepository', () => {
     });
 
     it('deve lançar erro se os dados forem inválidos', async () => {
-      await expect(repository.updateByMinhotecaId('TestTable', null, '123')).rejects.toThrow(
+      await expect(repository.updateByMinhotecaId('TestTable', null as any, '123')).rejects.toThrow(
         'Parâmetro data deve ser um objeto'
       );
-      await expect(repository.updateByMinhotecaId('TestTable', [], '123')).rejects.toThrow(
+      await expect(repository.updateByMinhotecaId('TestTable', [] as any, '123')).rejects.toThrow(
         'Parâmetro data deve ser um objeto'
       );
     });
@@ -432,6 +431,21 @@ describe('DynamoDBRepository', () => {
         'sk'
       );
       expect(result.data).toHaveProperty('success', true);
+    });
+
+    it('deve lançar erro se ocorrer falha na exclusão no banco de dados (catch)', async () => {
+      jest.spyOn(repository, 'queryData').mockResolvedValueOnce({ data: [{ pk: '1' }] } as never);
+      mockSend.mockRejectedValueOnce(new Error('DynamoDB Error'));
+
+      await expect(
+        repository.removeData('TestTable', [
+          {
+            attribute: { AttributeName: 'pk', AttributeType: 'S' },
+            attributeValue: '1',
+            partitionKey: true,
+          } as any,
+        ])
+      ).rejects.toThrow('Erro ao remover item de TestTable: Error: DynamoDB Error');
     });
   });
 

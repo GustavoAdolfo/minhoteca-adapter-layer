@@ -57,7 +57,7 @@ export class S3Repository {
     return url;
   }
 
-  async getDataFromS3File(bucketName: string, keyFile: string) {
+  async getDataFromS3File(bucketName: string, keyFile: string): Promise<unknown | null> {
     try {
       const cmd = new GetObjectCommand({
         Bucket: bucketName,
@@ -85,7 +85,7 @@ export class S3Repository {
     }
   }
 
-  async getTextFileFromS3File(bucketName: string, keyFile: string) {
+  async getTextFileFromS3File(bucketName: string, keyFile: string): Promise<string | undefined> {
     try {
       const cmd = new GetObjectCommand({
         Bucket: bucketName,
