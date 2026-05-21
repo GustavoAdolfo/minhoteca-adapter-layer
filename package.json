@@ -20,7 +20,7 @@
     "format": "prettier --write \"**/*.{js,ts,md,json,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{js,ts,md,json,yml,yaml}\"",
     "clean": "rm -rf dist coverage",
-    "postinstall": "husky install"
+    "prepare": "husky init"
   },
   "keywords": [
     "minhoteca",
