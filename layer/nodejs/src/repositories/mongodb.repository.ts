@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { MongoClient } from 'mongodb';
 import { KeyValueAttr, RepositoryInterface } from '../interfaces';
 import { ResultType } from '../interfaces/result.type';
@@ -23,7 +22,7 @@ export class MongoDBRepository implements RepositoryInterface {
   constructor() {
     this.#validateEnvironment();
     this.mongoDBConfig = this.mongodb;
-    console.log('✅ MongoDB configuration loaded from centralized config');
+    this.logService.info('✅ MongoDB configuration loaded from centralized config');
 
     // Fechar gracefully quando o processo terminar
     process.on('exit', () => {
@@ -52,15 +51,12 @@ export class MongoDBRepository implements RepositoryInterface {
     const missingVars = requiredVars.filter((varName) => !process.env[varName]);
 
     if (missingVars.length > 0) {
-      console.error('❌ Missing required environment variables:');
-      missingVars.forEach((varName) => {
-        console.error(`  - ${varName}`);
-      });
-      console.error('\nPlease create a .env file based on .env.example');
+      this.logService.error('❌ Missing required environment variables:', { missingVars });
+      this.logService.error('\nPlease create a .env file based on .env.example');
       process.exit(1);
     }
 
-    console.log('✅ Environment variables validated successfully');
+    this.logService.info('✅ Environment variables validated successfully');
   }
 
   get mongodb() {
@@ -68,7 +64,7 @@ export class MongoDBRepository implements RepositoryInterface {
     const uri = isAtlas
       ? `mongodb+srv://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASSWORD}@${process.env.MONGODB_CLUSTER}/?retryWrites=true&w=majority&appName=${process.env.MONGODB_APPNAME}`
       : `mongodb://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASSWORD}@${process.env.MONGODB_CLUSTER}/?retryWrites=true&w=majority&appName=${process.env.MONGODB_APPNAME}`;
-    console.log('Constructed MongoDB URI:', uri);
+    this.logService.info('Constructed MongoDB URI:', { uri });
     return {
       username: process.env.MONGODB_USERNAME,
       password: process.env.MONGODB_PASSWORD,
@@ -82,7 +78,7 @@ export class MongoDBRepository implements RepositoryInterface {
     // Espera se estiver conectando
     let retries = 0;
     while (this.isConnecting && retries < this.MAX_RETRIES) {
-      console.log(
+      this.logService.info(
         `⏳ Esperando conexão em andamento... (tentativa ${retries + 1}/${this.MAX_RETRIES})`
       );
       await new Promise((resolve) => setTimeout(resolve, this.RETRY_DELAY));
@@ -91,17 +87,21 @@ export class MongoDBRepository implements RepositoryInterface {
 
     // Se cliente está ativo, reutiliza (sem verificar saúde sempre)
     if (this.mongoClient) {
-      console.log('♻️ Reutilizando conexão MongoDB existente');
+      this.logService.info('♻️ Reutilizando conexão MongoDB existente');
 
       // Verifica saúde RARAMENTE para evitar race condition
       if (!this.isHealthChecking) {
         this.isHealthChecking = true;
         try {
-          console.log('🔍 Verificando saúde da conexão MongoDB...');
+          this.logService.info('🔍 Verificando saúde da conexão MongoDB...');
           await this.mongoClient.db('admin').command({ ping: 1 });
-          console.log('✅ Conexão MongoDB está viva');
+          this.logService.info('✅ Conexão MongoDB está viva');
         } catch (error) {
-          console.warn('⚠️ MongoDB client is not responding, resetting...', error);
+          this.logService.error(
+            '⚠️ MongoDB client is not responding, resetting...',
+            {},
+            error as Error
+          );
           this.mongoClient = null;
         } finally {
           this.isHealthChecking = false;
@@ -111,7 +111,7 @@ export class MongoDBRepository implements RepositoryInterface {
 
     // Se não tem cliente após health check, conecta
     if (!this.mongoClient) {
-      console.log('📡 Nenhuma conexão ativa, conectando...');
+      this.logService.info('📡 Nenhuma conexão ativa, conectando...');
       this.mongoClient = await this.#connectToCluster();
     }
 
@@ -132,13 +132,13 @@ export class MongoDBRepository implements RepositoryInterface {
         socketTimeoutMS: 45000,
       });
 
-      console.log('🔗 Connecting to MongoDB Atlas cluster...');
+      this.logService.info('🔗 Connecting to MongoDB Atlas cluster...');
       await mongoClient.connect();
-      console.log('✅ Successfully connected to MongoDB Atlas!');
+      this.logService.info('✅ Successfully connected to MongoDB Atlas!');
 
       return mongoClient;
     } catch (error) {
-      console.error('❌ Connection to MongoDB Atlas failed!', error);
+      this.logService.error('❌ Connection to MongoDB Atlas failed!', {}, error as Error);
       this.mongoClient = null;
       throw error;
     } finally {
@@ -152,11 +152,11 @@ export class MongoDBRepository implements RepositoryInterface {
   #closeSync() {
     if (this.mongoClient) {
       try {
-        console.log('🔌 Closing MongoDB connection...');
+        this.logService.info('🔌 Closing MongoDB connection...');
         // Não é async, apenas marca para fechar
         this.mongoClient = null;
       } catch (error) {
-        console.error('⚠️ Error on sync close:', error);
+        this.logService.error('⚠️ Error on sync close:', {}, error as Error);
       }
     }
   }
@@ -165,10 +165,10 @@ export class MongoDBRepository implements RepositoryInterface {
     if (this.mongoClient) {
       try {
         await this.mongoClient.close();
-        console.log('✅ MongoDB connection closed.');
+        this.logService.info('✅ MongoDB connection closed.');
         this.mongoClient = null;
       } catch (error) {
-        console.error('⚠️ Error closing MongoDB connection:', error);
+        this.logService.error('⚠️ Error closing MongoDB connection:', {}, error as Error);
         this.mongoClient = null;
       }
     }
@@ -186,7 +186,7 @@ export class MongoDBRepository implements RepositoryInterface {
 
     try {
       const result = await collection.insertOne(data);
-      console.log(`✅ Dsdos salvos com sucesso em ${collectionName} collection!`);
+      this.logService.info(`✅ Dsdos salvos com sucesso em ${collectionName} collection!`);
       return {
         data: { _id: result.insertedId, ...data },
         currentPage: 1,
@@ -197,7 +197,11 @@ export class MongoDBRepository implements RepositoryInterface {
         limit: 1,
       };
     } catch (error) {
-      console.error(`❌ Failed to save data in ${collectionName} collection!`, error);
+      this.logService.error(
+        `❌ Failed to save data in ${collectionName} collection!`,
+        {},
+        error as Error
+      );
       throw error;
     }
   }
@@ -272,7 +276,7 @@ export class MongoDBRepository implements RepositoryInterface {
       // Usamos deleteMany para honrar filtros que possam retornar mais de um documento
       const result = await collection.deleteMany(query);
 
-      console.log(`✅ Data removed successfully from ${tableName} collection!`);
+      this.logService.info(`✅ Data removed successfully from ${tableName} collection!`);
       return {
         data: { deletedCount: result.deletedCount },
         currentPage: 1,
@@ -283,7 +287,11 @@ export class MongoDBRepository implements RepositoryInterface {
         limit: result.deletedCount,
       };
     } catch (error) {
-      console.error(`❌ Failed to remove data from ${tableName} collection!`, error);
+      this.logService.error(
+        `❌ Failed to remove data from ${tableName} collection!`,
+        {},
+        error as Error
+      );
       throw error;
     }
   }
@@ -308,8 +316,7 @@ export class MongoDBRepository implements RepositoryInterface {
         { $set: data },
         { returnDocument: 'after' }
       );
-      console.log('**********************', { result });
-      console.log(`✅ Data updated successfully in ${collectionName} collection!`);
+      this.logService.info(`✅ Data updated successfully in ${collectionName} collection!`);
       return {
         data: result,
         currentPage: 1,
@@ -320,7 +327,11 @@ export class MongoDBRepository implements RepositoryInterface {
         limit: result ? 1 : 0,
       };
     } catch (error) {
-      console.error(`❌ Failed to update data in ${collectionName} collection!`, error);
+      this.logService.error(
+        `❌ Failed to update data in ${collectionName} collection!`,
+        {},
+        error as Error
+      );
       throw error;
     }
   }
@@ -330,13 +341,15 @@ export class MongoDBRepository implements RepositoryInterface {
 
     const db = client.db(this.mongoDBConfig.database);
     const collection = db.collection(collectionName);
-    console.log(
+    this.logService.info(
       `🔍 Será realizada busca de documento pelo ID ${id} em ${collectionName} collection...`
     );
 
     try {
       const result = await collection.findOne({ id });
-      console.log(`✅ Data retrieved successfully from ${collectionName} collection!)`, { result });
+      this.logService.info(`✅ Data retrieved successfully from ${collectionName} collection!)`, {
+        result,
+      });
       return {
         data: result,
         currentPage: 1,
@@ -347,14 +360,18 @@ export class MongoDBRepository implements RepositoryInterface {
         limit: result ? 1 : 0,
       };
     } catch (error) {
-      console.error(`❌ Failed to retrieve data from ${collectionName} collection!`, error);
+      this.logService.error(
+        `❌ Failed to retrieve data from ${collectionName} collection!`,
+        {},
+        error as Error
+      );
       throw error;
     }
   }
 
   async getAll(tableName: string, options: unknown = {}): Promise<ResultType> {
     const client = await this.#getConnection();
-    console.log('Consulta solicitada para getAll com opções:', options);
+    this.logService.info('Consulta solicitada para getAll com opções:', { options });
 
     const db = client.db(this.mongoDBConfig.database);
 
@@ -379,14 +396,16 @@ export class MongoDBRepository implements RepositoryInterface {
         : {};
 
       if (process.env.MONGODB_DEBUG_QUERY === 'true') {
-        console.log('[MongoDBRepository.getAll] filterQuery:', JSON.stringify(filterQuery));
-        console.log('[MongoDBRepository.getAll] options:', {
-          page,
-          limit,
-          sortBy,
-          sortOrder,
-          filterKey,
-          filterValue,
+        this.logService.info('[MongoDBRepository.getAll] filterQuery:', {
+          filterQuery,
+          options: {
+            page,
+            limit,
+            sortBy,
+            sortOrder,
+            filterKey,
+            filterValue,
+          },
         });
       }
 
@@ -440,7 +459,11 @@ export class MongoDBRepository implements RepositoryInterface {
         limit,
       };
     } catch (error) {
-      console.error(`❌ Failed to retrieve all data from ${tableName} collection!`, error);
+      this.logService.error(
+        `❌ Failed to retrieve all data from ${tableName} collection!`,
+        {},
+        error as Error
+      );
       throw error;
     }
   }
@@ -453,7 +476,9 @@ export class MongoDBRepository implements RepositoryInterface {
 
     try {
       const results = await collection.find({ [field]: value }).toArray();
-      console.log(`✅ Data filtered by ${field} successfully from ${collectionName} collection!`);
+      this.logService.info(
+        `✅ Data filtered by ${field} successfully from ${collectionName} collection!`
+      );
       return {
         data: results,
         currentPage: 1,
@@ -464,7 +489,11 @@ export class MongoDBRepository implements RepositoryInterface {
         limit: results.length,
       };
     } catch (error) {
-      console.error(`❌ Failed to filter data by ${field} in ${collectionName} collection!`, error);
+      this.logService.error(
+        `❌ Failed to filter data by ${field} in ${collectionName} collection!`,
+        {},
+        error as Error
+      );
       throw error;
     }
   }
@@ -529,7 +558,7 @@ export class MongoDBRepository implements RepositoryInterface {
       // Obter total de documentos para metadados de paginação
       const totalDocuments = (await collection.countDocuments(query)) || 0;
 
-      console.log(`✅ Data selected successfully from ${collectionName} collection!`);
+      this.logService.info(`✅ Data selected successfully from ${collectionName} collection!`);
 
       return {
         data: results,
@@ -541,7 +570,11 @@ export class MongoDBRepository implements RepositoryInterface {
         limit: results?.length || 0,
       };
     } catch (error) {
-      console.error(`❌ Failed to select data from ${collectionName} collection!`, error);
+      this.logService.error(
+        `❌ Failed to select data from ${collectionName} collection!`,
+        {},
+        error as Error
+      );
       throw error;
     }
   }
@@ -614,7 +647,7 @@ export class MongoDBRepository implements RepositoryInterface {
       const totalDocuments = (await collection.countDocuments(query)) || 0;
       const totalPages = limit > 0 ? Math.ceil(totalDocuments / limit) : 1;
 
-      console.log(
+      this.logService.info(
         `✅ Data retrieved with projection successfully from ${collectionName} collection! Page: ${page}, Limit: ${limit}`
       );
 
@@ -628,9 +661,10 @@ export class MongoDBRepository implements RepositoryInterface {
         limit,
       };
     } catch (error) {
-      console.error(
+      this.logService.error(
         `❌ Failed to retrieve data with projection from ${collectionName} collection!`,
-        error
+        {},
+        error as Error
       );
       throw error;
     }
@@ -643,13 +677,13 @@ export class MongoDBRepository implements RepositoryInterface {
     const collection = db.collection(collectionName);
 
     try {
-      console.log('🚩 Atributos de consulta para deleteByMinhotecaId:', { id });
+      this.logService.info('🚩 Atributos de consulta para deleteByMinhotecaId:', { id });
 
       // findOneAndDelete deleta e retorna o documento removido
       const result = await collection.findOneAndDelete({ id });
 
       if (!result) {
-        console.log(`⚠️ No document found with id: ${id} in ${collectionName} collection`);
+        this.logService.warn(`⚠️ No document found with id: ${id} in ${collectionName} collection`);
         return {
           data: null,
           currentPage: 0,
@@ -661,7 +695,7 @@ export class MongoDBRepository implements RepositoryInterface {
         };
       }
 
-      console.log(
+      this.logService.info(
         `✅ Document with id ${id} deleted successfully from ${collectionName} collection!`
       );
       return {
@@ -674,7 +708,11 @@ export class MongoDBRepository implements RepositoryInterface {
         limit: 0,
       };
     } catch (error) {
-      console.error(`❌ Error deleting document by id from ${collectionName}:`, error);
+      this.logService.error(
+        `❌ Error deleting document by id from ${collectionName}:`,
+        {},
+        error as Error
+      );
       throw error;
     }
   }
