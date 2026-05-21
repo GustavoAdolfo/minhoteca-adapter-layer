@@ -548,6 +548,9 @@ describe('MongoDBRepository', () => {
         (repository as any).isConnecting = true;
         (repository as any).mongoClient = null;
 
+        mockCollection.toArray.mockResolvedValueOnce([]);
+        mockCollection.countDocuments.mockResolvedValueOnce(0);
+
         // Simulamos a finalização da conexão por outra requisição após 50ms
         setTimeout(() => {
           (repository as any).isConnecting = false;
@@ -561,6 +564,8 @@ describe('MongoDBRepository', () => {
       it('deve reutilizar cliente sem checar a saúde se isHealthChecking for verdadeiro (evita duplo ping)', async () => {
         (repository as any).mongoClient = mockClient;
         (repository as any).isHealthChecking = true;
+        mockCollection.toArray.mockResolvedValueOnce([]);
+        mockCollection.countDocuments.mockResolvedValueOnce(0);
 
         await repository.getAll('TestTable');
 

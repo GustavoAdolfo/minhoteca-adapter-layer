@@ -19,28 +19,24 @@ import { LogService } from '@gustavoadolfo/minhoteca-core-layer';
 
 export class DynamoDBRepository implements RepositoryInterface {
   private client: DynamoDBDocumentClient;
-  private logService = new LogService('MongoDBRepository');
+  private logService = new LogService('DynamoDBRepository');
 
   constructor() {
     this.client = DynamoDBDocumentClient.from(
       createClient(SERVICE_TYPE.DYNAMODB) as DynamoDBClient,
       {
         marshallOptions: {
-          // Remove valores undefined (evita erro do DynamoDB)
           removeUndefinedValues: true,
-          // Converte instâncias de classes em maps
           convertClassInstanceToMap: true,
-          // Converte objetos vazios em maps vazios (default: false)
           convertEmptyValues: false,
-          // Converte top-level containers (útil para Sets, Maps complexos)
           convertTopLevelContainer: false,
         },
         unmarshallOptions: {
-          // Converte números armazenados como strings de volta para Number
           wrapNumbers: false,
         },
       }
     );
+    this.logService.info('✅ Cliente DynamoDB configurado e inicializado');
   }
 
   async updateByMinhotecaId(
@@ -49,13 +45,15 @@ export class DynamoDBRepository implements RepositoryInterface {
     id: string
   ): Promise<ResultType> {
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
-      throw new Error('Parâmetro data deve ser um objeto com campos a serem atualizados');
+      this.logService.error('‼️ Parâmetro data deve ser um objeto com campos a serem atualizados.');
+      throw new Error('Parâmetro data deve ser um objeto com campos a serem atualizados.');
     }
 
     const updateData = data;
     const keys = Object.keys(updateData).filter((key) => key !== 'id');
 
     if (keys.length === 0) {
+      this.logService.info('⁉️ Nenhum campo para atualização fornecido.');
       return {
         data: [],
         currentPage: 1,
@@ -91,6 +89,10 @@ export class DynamoDBRepository implements RepositoryInterface {
 
     try {
       const result = await this.client.send(command);
+      this.logService.info(`✅ Dados atualizados com sucesso em ${tableName}!`, {
+        result,
+        updateData,
+      });
       return {
         data: result.Attributes ? [result.Attributes] : [],
         currentPage: 1,
@@ -101,11 +103,19 @@ export class DynamoDBRepository implements RepositoryInterface {
         limit: result.Attributes ? 1 : 0,
       };
     } catch (error: unknown) {
+      this.logService.error(
+        `❌ Erro ao atualizar item em ${tableName}: ${String(error)}`,
+        {
+          updateData,
+        },
+        error as Error
+      );
       throw new Error(`Erro ao atualizar item em ${tableName}: ${String(error)}`);
     }
   }
 
   async deleteByMinhotecaId(tableName: string, id: string): Promise<ResultType> {
+    this.logService.info(`🗑️ Iniciando remoção de item por ID em ${tableName}...`, { id });
     const command = new DeleteCommand({
       TableName: tableName,
       Key: { id },
@@ -116,6 +126,7 @@ export class DynamoDBRepository implements RepositoryInterface {
       const result = await this.client.send(command);
 
       if (!result.Attributes) {
+        this.logService.info(`⚠️ Nenhum item encontrado para o ID ${id} em ${tableName}.`);
         return {
           data: [],
           currentPage: 1,
@@ -127,6 +138,9 @@ export class DynamoDBRepository implements RepositoryInterface {
         };
       }
 
+      this.logService.info(`✅ Item com ID ${id} removido com sucesso de ${tableName}!`, {
+        result,
+      });
       return {
         data: [result.Attributes],
         currentPage: 1,
@@ -137,11 +151,17 @@ export class DynamoDBRepository implements RepositoryInterface {
         limit: 1,
       };
     } catch (error: unknown) {
+      this.logService.error(
+        `❌ Erro ao remover item por ID em ${tableName}...`,
+        { id },
+        error as Error
+      );
       throw new Error(`Erro ao remover item por ID em ${tableName}: ${String(error)}`);
     }
   }
 
   findByMinhotecaId(collectionName: string, id: string): Promise<ResultType> {
+    this.logService.info(`🔍 Buscando item pelo ID ${id} na tabela ${collectionName}...`);
     return this.queryData(collectionName, [
       {
         attribute: {
@@ -156,20 +176,31 @@ export class DynamoDBRepository implements RepositoryInterface {
   }
 
   saveData = async (tableName: string, itemData: Record<string, unknown>): Promise<ResultType> => {
+    this.logService.info(`💾 Salvando dados na tabela ${tableName}...`);
     const command = new PutCommand({
       TableName: tableName,
       Item: itemData,
     });
-    const result = await this.client.send(command);
-    return {
-      data: [result],
-      currentPage: 1,
-      totalPages: 1,
-      totalDocuments: 1,
-      hasNextPage: false,
-      hasPrevPage: false,
-      limit: 1,
-    };
+    try {
+      const result = await this.client.send(command);
+      this.logService.info(`✅ Dados salvos com sucesso em ${tableName}!`);
+      return {
+        data: [result],
+        currentPage: 1,
+        totalPages: 1,
+        totalDocuments: 1,
+        hasNextPage: false,
+        hasPrevPage: false,
+        limit: 1,
+      };
+    } catch (error: unknown) {
+      this.logService.error(
+        `❌ Erro ao salvar dados na tabela ${tableName}`,
+        { itemData },
+        error as Error
+      );
+      throw error;
+    }
   };
 
   getData = async (
@@ -177,6 +208,10 @@ export class DynamoDBRepository implements RepositoryInterface {
     hashKey: { name: string; type: string; value: string },
     sortKey?: { name: string; type: string; value: string } | undefined
   ): Promise<ResultType> => {
+    this.logService.info(`📡 Consultando dados (Query) na tabela ${tableName}...`, {
+      hashKey,
+      sortKey,
+    });
     const attributes: Array<{
       attributeName: string;
       attributeType: string;
@@ -231,6 +266,9 @@ export class DynamoDBRepository implements RepositoryInterface {
     try {
       const content: QueryOutput = await this.client.send(cmd);
       const result = (content.Items ?? []).map((item) => unmarshall(item));
+      this.logService.info(
+        `✅ Consulta (Query) realizada com sucesso em ${tableName}. Foram retornados ${result.length} item(ns).`
+      );
       return {
         data: result as [],
         currentPage: 1,
@@ -241,6 +279,11 @@ export class DynamoDBRepository implements RepositoryInterface {
         limit: result.length,
       };
     } catch (error: unknown) {
+      this.logService.error(
+        `❌ Erro ao consultar tabela (Query) ${tableName}`,
+        { hashKey, sortKey },
+        error as Error
+      );
       const resultError = new Error(`Erro ao consultar tabela ${tableName}`);
       resultError.stack = JSON.stringify(error);
       throw resultError;
@@ -248,16 +291,19 @@ export class DynamoDBRepository implements RepositoryInterface {
   };
 
   queryData = async (tableName: string, params: KeyValueAttr[]): Promise<ResultType> => {
+    this.logService.info(`📡 Iniciando consulta (queryData) na tabela ${tableName}...`);
     const invalidParams = params.some(
       (param: KeyValueAttr) => !param.attribute.AttributeName || !param.attribute.AttributeType
     );
     if (invalidParams) {
+      this.logService.error('‼️ Parâmetros inválidos para consulta DynamoDB', { params });
       throw new Error('Parâmetros inválidos para consulta DynamoDB');
     }
 
     // Se houver partition key, usar getData (que faz Query)
     const pk = params.find((p) => p.partitionKey);
     if (pk) {
+      this.logService.info('🔄 Chave de partição identificada, redirecionando para getData...');
       const sk = params.find((p) => p.sortKey);
       const result = await this.getData(
         tableName,
@@ -311,10 +357,16 @@ export class DynamoDBRepository implements RepositoryInterface {
       scanParameters.FilterExpression = expressionFilters;
     }
 
+    this.logService.info(`📡 Executando Scan na tabela ${tableName} com filtros...`, {
+      scanParameters,
+    });
     const cmd = new ScanCommand(scanParameters);
     try {
       const content = await this.client.send(cmd);
       const result = (content.Items ?? []).map((item) => unmarshall(item));
+      this.logService.info(
+        `✅ Scan realizado com sucesso em ${tableName}. Foram retornados ${result.length} item(ns).`
+      );
       return {
         data: result,
         currentPage: 1,
@@ -325,6 +377,11 @@ export class DynamoDBRepository implements RepositoryInterface {
         limit: result.length,
       };
     } catch (error: unknown) {
+      this.logService.error(
+        `❌ Erro ao executar Scan na tabela ${tableName}`,
+        { params },
+        error as Error
+      );
       const resultError = new Error(`Erro ao consultar tabela ${tableName}`);
       resultError.stack = JSON.stringify(error);
       throw resultError;
@@ -338,11 +395,17 @@ export class DynamoDBRepository implements RepositoryInterface {
     sortKeyName?: string
   ): Promise<ResultType> => {
     try {
+      this.logService.info(`🗑️ Iniciando remoção múltipla de itens na tabela ${tableName}...`, {
+        attributes,
+      });
       // Validar parâmetros
       const invalidParams = attributes.some(
         (param: KeyValueAttr) => !param.attribute.AttributeName || !param.attribute.AttributeType
       );
       if (invalidParams) {
+        this.logService.error('‼️ Parâmetros inválidos para remover items de DynamoDB', {
+          attributes,
+        });
         throw new Error('Parâmetros inválidos para remover items de DynamoDB');
       }
 
@@ -350,6 +413,9 @@ export class DynamoDBRepository implements RepositoryInterface {
       const items = await this.queryData(tableName, attributes);
 
       if (items.data.length === 0) {
+        this.logService.info(
+          `⚠️ Nenhum item encontrado em ${tableName} com os filtros informados para remoção.`
+        );
         return {
           data: {
             success: true,
@@ -369,6 +435,7 @@ export class DynamoDBRepository implements RepositoryInterface {
       const partitionKeyName = partitionKeyAttr?.attribute.AttributeName ?? partKeyName;
 
       if (!partitionKeyName) {
+        this.logService.error('‼️ Partition key é obrigatória para remover items', { partKeyName });
         throw new Error('Partition key é obrigatória para remover items');
       }
 
@@ -398,6 +465,7 @@ export class DynamoDBRepository implements RepositoryInterface {
         deletedCount++;
       }
 
+      this.logService.info(`✅ ${deletedCount} item(ns) removido(s) com sucesso de ${tableName}!`);
       return {
         data: { success: true, message: `${deletedCount} item(ns) removido(s) de ${tableName}` },
         currentPage: 1,
@@ -408,11 +476,17 @@ export class DynamoDBRepository implements RepositoryInterface {
         limit: deletedCount,
       };
     } catch (error) {
+      this.logService.error(
+        `❌ Erro ao remover itens de ${tableName}`,
+        { attributes },
+        error as Error
+      );
       throw new Error(`Erro ao remover item de ${tableName}: ${String(error)}`);
     }
   };
 
   getAll = async <T>(tableName: string): Promise<ResultType> => {
+    this.logService.info(`📡 Executando Scan (getAll) na tabela ${tableName}...`);
     const scanParameters: {
       TableName: string;
     } = {
@@ -423,6 +497,9 @@ export class DynamoDBRepository implements RepositoryInterface {
     try {
       const content = await this.client.send(cmd);
       const result = (content.Items ?? []).map((item) => unmarshall(item));
+      this.logService.info(
+        `✅ Scan (getAll) realizado com sucesso em ${tableName}. Foram retornados ${result.length} item(ns).`
+      );
       return {
         data: result as T[],
         currentPage: 1,
@@ -433,6 +510,11 @@ export class DynamoDBRepository implements RepositoryInterface {
         limit: result.length,
       };
     } catch (error: unknown) {
+      this.logService.error(
+        `❌ Erro ao consultar tabela (getAll) ${tableName}`,
+        {},
+        error as Error
+      );
       const resultError = new Error(`Erro ao consultar tabela ${tableName}`);
       resultError.stack = JSON.stringify(error);
       throw resultError;
