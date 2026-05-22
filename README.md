@@ -74,9 +74,10 @@ src/
 ## 🧪 Testes
 
 ```bash
-npm test              # Rodar testes
+npm test              # Rodar testes unitários
 npm test:coverage    # Ver cobertura
 npm test:watch      # Modo watch
+npm run test:integration # Rodar testes de integração (requer configuração local/AWS)
 ```
 
 ## 🔨 Desenvolvimento

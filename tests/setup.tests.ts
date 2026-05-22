@@ -1,7 +1,7 @@
 import { config as dotenvConfig } from 'dotenv';
 
 // Carrega envs de teste (ajuste o path conforme seu projeto)
-dotenvConfig({ path: 'src/__tests__/.env.test' });
+dotenvConfig({ path: '.env.test' });
 
 // Defaults para testes locais (evitam provider chain)
 process.env.NODE_ENV = 'test';

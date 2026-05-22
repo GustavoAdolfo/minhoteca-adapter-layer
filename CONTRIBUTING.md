@@ -80,9 +80,10 @@ git checkout -b fix/minha-correcao
 Todas as novas features devem incluir testes unitários. Coloque os testes em `src/__tests__/` seguindo a estrutura de diretórios do código.
 
 ```bash
-npm run test         # Rodar testes
+npm run test         # Rodar testes unitários
 npm run test:coverage # Ver cobertura
 npm run test:watch   # Modo watch
+npm run test:integration # Rodar testes de integração (requer infraestrutura externa)
 ```
 
 ### 2. Verifique o Linter
