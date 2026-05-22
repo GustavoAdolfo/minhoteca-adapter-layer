@@ -1,6 +1,6 @@
 {
   "name": "@gustavoadolfo/minhoteca-adapter-layer",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Camada de adaptadores, repositórios, proxies e outros padrões para solução de demandas do projeto Minhoteca.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -31,12 +31,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/GustavoAdolfo/minhoteca-adapter-layer.git"
+    "url": "git+https://github.com/gustavoadolfo/minhoteca-adapter-layer.git"
   },
   "bugs": {
-    "url": "https://github.com/GustavoAdolfo/minhoteca-adapter-layer/issues"
+    "url": "https://github.com/gustavoadolfo/minhoteca-adapter-layer/issues"
   },
-  "homepage": "https://github.com/GustavoAdolfo/minhoteca-adapter-layer#readme",
+  "homepage": "https://github.com/gustavoadolfo/minhoteca-adapter-layer#readme",
   "engines": {
     "node": ">=24.0.0"
   },
