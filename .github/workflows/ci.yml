@@ -85,12 +85,19 @@ jobs:
 
           # sort -V ordena as versões. Se MAIN_VERSION for a menor (ou igual), então DEV_VERSION >= MAIN_VERSION
           if [ "$(printf '%s\n' "$MAIN_VERSION" "$DEV_VERSION" | sort -V | head -n1)" = "$MAIN_VERSION" ]; then
-            PR_EXISTS=$(gh pr list --base main --head develop --state open --json number -q 'length')
-
-            if [ "$PR_EXISTS" -eq "0" ]; then
-              gh pr create --base main --head develop --title "🚀 Release: Atualização da \`main\` a partir da \`develop\`" --body "Este Pull Request foi aberto automaticamente após os testes passarem com sucesso na branch \`develop\`.\n\n**Versão detectada em develop:** \`$DEV_VERSION\`\n**Versão atual em main:** \`$MAIN_VERSION\`\n\nRevise as alterações e aprove para promover para produção."
+            # Verifica se existem modificações reais na develop em relação ao que já está na main
+            CHANGED_FILES=$(git diff origin/main...HEAD --name-only)
+            
+            if [ -z "$CHANGED_FILES" ]; then
+              echo "A branch develop está perfeitamente sincronizada com a main. Não há novas modificações. O PR automático não será criado para evitar loop."
             else
-              echo "Já existe um Pull Request aberto de develop para main. Nenhuma ação adicional necessária."
+              PR_EXISTS=$(gh pr list --base main --head develop --state open --json number -q 'length')
+
+              if [ "$PR_EXISTS" -eq "0" ]; then
+                gh pr create --base main --head develop --title "🚀 Release: Atualização da \`main\` a partir da \`develop\`" --body "Este Pull Request foi aberto automaticamente após os testes passarem com sucesso na branch \`develop\`.\n\n**Versão detectada em develop:** \`$DEV_VERSION\`\n**Versão atual em main:** \`$MAIN_VERSION\`\n\nRevise as alterações e aprove para promover para produção."
+              else
+                echo "Já existe um Pull Request aberto de develop para main. Nenhuma ação adicional necessária."
+              fi
             fi
           else
             echo "A versão na develop ($DEV_VERSION) é menor que a versão na main ($MAIN_VERSION). Não será aberto um Pull Request automático."
