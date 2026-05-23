@@ -2,10 +2,10 @@
   "name": "@gustavoadolfo/minhoteca-adapter-layer",
   "version": "0.1.1",
   "description": "Camada de adaptadores, repositórios, proxies e outros padrões para solução de demandas do projeto Minhoteca.",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "layer/nodejs/dist/index.js",
+  "types": "layer/nodejs/dist/index.d.ts",
   "files": [
-    "dist",
+    "layer/nodejs/dist",
     "README.md",
     "LICENSE"
   ],
@@ -21,8 +21,8 @@
     "lint:staged": "lint-staged",
     "format": "prettier --write \"**/*.{js,ts,md,json,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{js,ts,md,json,yml,yaml}\"",
-    "clean": "rm -rf dist coverage",
-    "prepare": "husky"
+    "clean": "rm -rf layer/nodejs/dist coverage",
+    "prepare": "husky init"
   },
   "keywords": [
     "minhoteca",
