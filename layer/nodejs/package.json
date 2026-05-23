@@ -41,7 +41,6 @@
     "registry": "https://npm.pkg.github.com"
   },
   "dependencies": {
-    "winston": "^3.19.0",
-    "winston-cloudwatch": "^6.3.0"
+    "mongodb": "^7.2.0"
   }
 }
