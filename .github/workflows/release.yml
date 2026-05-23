@@ -108,11 +108,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Tenta criar um PR da main para a develop
           PR_EXISTS=$(gh pr list --base develop --head main --state open --json number -q 'length')
 
           if [ "$PR_EXISTS" -eq "0" ]; then
-            gh pr create --base develop --head main --title "🔄 chore: Sincronizar \`develop\` com \`main\` após release" --body "Sincronização automática pós-release para garantir que a \`develop\` esteja atualizada com a versão e changelog recém-publicados na \`main\`."
+            gh pr create --base develop --head main --title "🔄 chore: Sincronizar \`develop\` com \`main\` após release" --body "Sincronização automática pós-release para garantir que a \`develop\` esteja atualizada com a versão (e possível changelog) recém-publicada na \`main\`."
           else
             echo "Já existe um PR aberto para sincronizar a main com a develop."
           fi
