@@ -1,6 +1,6 @@
 {
   "name": "@gustavoadolfo/minhoteca-adapter-layer",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Camada de adaptadores, repositórios, proxies e outros padrões para solução de demandas do projeto Minhoteca.",
   "main": "layer/nodejs/dist/index.js",
   "types": "layer/nodejs/dist/index.d.ts",
