@@ -21,7 +21,7 @@ data "external" "adapter_layer_version" {
 resource "null_resource" "adapter_layer_build" {
   triggers = {
     src_hash   = sha256(join("", [for f in sort(fileset("${path.module}/../../../layer/nodejs/src", "**/*")) : filesha256("${path.module}/../../../layer/nodejs/src/${f}")]))
-    pkg_hash   = filesha256("${path.module}/../../../package.json")
+    pkg_hash   = filesha256("${path.module}/../../../layer/nodejs/package.json")
     always_run = timestamp() # Força o script a rodar sempre, essencial para o runner do GitHub Actions
   }
   provisioner "local-exec" {
@@ -32,12 +32,12 @@ resource "null_resource" "adapter_layer_build" {
       npm run build
       rm -rf dist_layer
       mkdir -p dist_layer/nodejs
-      cp package.json package-lock.json dist_layer/nodejs/
+      cp layer/nodejs/package.json layer/nodejs/package-lock.json dist_layer/nodejs/
       cd dist_layer/nodejs
       npm ci --omit=dev
       mkdir -p node_modules/@gustavoadolfo/minhoteca-adapter-layer
       cp -r ../../layer/nodejs/dist node_modules/@gustavoadolfo/minhoteca-adapter-layer/
-      cp ../../package.json node_modules/@gustavoadolfo/minhoteca-adapter-layer/
+      cp ../../layer/nodejs/package.json node_modules/@gustavoadolfo/minhoteca-adapter-layer/
     EOF
   }
 }
