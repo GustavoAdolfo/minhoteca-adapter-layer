@@ -31,6 +31,7 @@
   ],
   "author": "Gustavo Adolfo",
   "license": "MIT",
+  "type": "commonjs",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gustavoadolfo/minhoteca-adapter-layer.git"
