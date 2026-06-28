@@ -362,9 +362,15 @@ export class MongoDBRepository implements RepositoryInterface {
 
     try {
       const result = await collection.findOne({ id });
-      this.logService.info(`✅ Documento recuperado com sucesso da collection ${collectionName}!`, {
-        encontrado: !!result,
-      });
+      this.logService.info(
+        `✅ Documento recuperado com sucesso da collection ${collectionName}!`,
+        {
+          encontrado: !!result,
+        },
+        {
+          result,
+        }
+      );
       return {
         data: result,
         currentPage: 1,
@@ -377,7 +383,9 @@ export class MongoDBRepository implements RepositoryInterface {
     } catch (error) {
       this.logService.error(
         `❌ Erro ao buscar documento na collection ${collectionName}!`,
-        {},
+        {
+          id,
+        },
         error as Error
       );
       throw error;
