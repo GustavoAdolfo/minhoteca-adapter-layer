@@ -41,6 +41,7 @@ describe('MongoDBRepository', () => {
       findOneAndUpdate: jest.fn(),
       findOneAndDelete: jest.fn(),
       sort: jest.fn().mockReturnThis(),
+      collation: jest.fn().mockReturnThis(),
       skip: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
     };
@@ -203,6 +204,42 @@ describe('MongoDBRepository', () => {
 
     expect(mockCollection.find).toHaveBeenCalledWith({ status: 'active', type: 'book' }, {});
     expect(result.data).toEqual(testData);
+  });
+
+  it('should retrieve list by minhoteca ids successfully', async () => {
+    const ids = ['id-1', 'id-2'];
+    const testData = [
+      { id: 'id-1', name: 'First' },
+      { id: 'id-2', name: 'Second' },
+    ];
+
+    mockCollection.toArray.mockResolvedValueOnce(testData);
+
+    const result = await repository.getListByMinhotecaIds('TestCollection', ids);
+
+    expect(mockCollection.find).toHaveBeenCalledWith({ id: { $in: ids } });
+    expect(result.data).toEqual(testData);
+    expect(result.totalDocuments).toBe(2);
+    expect(result.limit).toBe(2);
+  });
+
+  it('should return empty list when ids array is empty', async () => {
+    mockCollection.toArray.mockResolvedValueOnce([]);
+
+    const result = await repository.getListByMinhotecaIds('TestCollection', []);
+
+    expect(mockCollection.find).toHaveBeenCalledWith({ id: { $in: [] } });
+    expect(result.data).toEqual([]);
+    expect(result.totalDocuments).toBe(0);
+    expect(result.limit).toBe(0);
+  });
+
+  it('should throw error when getListByMinhotecaIds fails', async () => {
+    mockCollection.toArray.mockRejectedValueOnce(new Error('DB Error'));
+
+    await expect(repository.getListByMinhotecaIds('TestCollection', ['id-1'])).rejects.toThrow(
+      'DB Error'
+    );
   });
 
   describe('Edge Cases e Error Handling', () => {
@@ -458,6 +495,7 @@ describe('MongoDBRepository', () => {
       });
 
       expect(mockCollection.sort).toHaveBeenCalledWith({ titulo: -1 });
+      expect(mockCollection.collation).toHaveBeenCalledWith({ locale: 'pt', strength: 1 });
       process.env.MONGODB_DEBUG_QUERY = 'false'; // reseta
     });
 
@@ -488,6 +526,7 @@ describe('MongoDBRepository', () => {
 
         expect(mockCollection.find).toHaveBeenCalledWith({}, { projection: { name: 1 } });
         expect(mockCollection.sort).toHaveBeenCalledWith({ titulo: 1 });
+        expect(mockCollection.collation).toHaveBeenCalledWith({ locale: 'pt', strength: 1 });
       });
 
       it('deve consultar documentos (findWithProjection) usando projection objeto e order invertida (desc)', async () => {
@@ -502,6 +541,7 @@ describe('MongoDBRepository', () => {
 
         expect(mockCollection.find).toHaveBeenCalledWith({}, { projection: { name: 1 } });
         expect(mockCollection.sort).toHaveBeenCalledWith({ titulo: -1 });
+        expect(mockCollection.collation).toHaveBeenCalledWith({ locale: 'pt', strength: 1 });
       });
 
       it('deve consultar documentos (findWithProjection) usando projection array e ordenação padrão', async () => {
@@ -511,6 +551,7 @@ describe('MongoDBRepository', () => {
 
         expect(mockCollection.find).toHaveBeenCalledWith({}, { projection: { name: 1 } });
         expect(mockCollection.sort).toHaveBeenCalledWith({ titulo: 1 });
+        expect(mockCollection.collation).toHaveBeenCalledWith({ locale: 'pt', strength: 1 });
       });
 
       it('deve lidar com falhas de DB nos métodos de seleção e projeção', async () => {
