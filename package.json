@@ -1,6 +1,6 @@
 {
   "name": "@gustavoadolfo/minhoteca-adapter-layer",
-  "version": "0.1.23",
+  "version": "0.1.32",
   "description": "Camada de adaptadores, repositórios, proxies e outros padrões para solução de demandas do projeto Minhoteca.",
   "main": "layer/nodejs/dist/index.js",
   "types": "layer/nodejs/dist/index.d.ts",
@@ -56,24 +56,24 @@
     ]
   },
   "dependencies": {
-    "mongodb": "^7.3.0"
+    "mongodb": "^7.4.0"
   },
   "devDependencies": {
     "@aws-sdk/client-dynamodb": "^3.1073.0",
-    "@aws-sdk/client-s3": "^3.1073.0",
-    "@aws-sdk/lib-dynamodb": "^3.1073.0",
+    "@aws-sdk/client-s3": "^3.1079.0",
+    "@aws-sdk/lib-dynamodb": "^3.1079.0",
     "@aws-sdk/node-http-handler": "^3.374.0",
     "@aws-sdk/s3-request-presigner": "^3.1075.0",
-    "@commitlint/cli": "^21.0.1",
-    "@commitlint/config-conventional": "^21.0.2",
-    "@gustavoadolfo/minhoteca-core-layer": "^1.0.28",
+    "@commitlint/cli": "^21.2.0",
+    "@commitlint/config-conventional": "^21.2.0",
+    "@gustavoadolfo/minhoteca-core-layer": "^1.0.10",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.0.1",
-    "@typescript-eslint/eslint-plugin": "^8.61.1",
-    "@typescript-eslint/parser": "^8.59.4",
-    "commitlint": "^21.0.2",
+    "@typescript-eslint/eslint-plugin": "^8.62.1",
+    "@typescript-eslint/parser": "^8.62.0",
+    "commitlint": "^21.2.0",
     "dotenv": "^17.4.2",
-    "eslint": "^10.5.0",
+    "eslint": "^10.6.0",
     "husky": "^9.1.7",
     "jest": "^30.4.2",
     "lint-staged": "^17.0.8",
