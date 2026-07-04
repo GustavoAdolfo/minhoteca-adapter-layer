@@ -23,4 +23,5 @@ export interface RepositoryInterface {
   ): Promise<ResultType>;
   deleteByMinhotecaId(collectionName: string, id: string): Promise<ResultType>;
   findByMinhotecaId(collectionName: string, id: string): Promise<ResultType>;
+  getListByMinhotecaIds(collectionName: string, ids: string[]): Promise<ResultType>;
 }
