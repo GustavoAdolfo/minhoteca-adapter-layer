@@ -65,7 +65,7 @@
     "@aws-sdk/node-http-handler": "^3.374.0",
     "@aws-sdk/s3-request-presigner": "^3.1075.0",
     "@commitlint/cli": "^21.0.1",
-    "@commitlint/config-conventional": "^21.0.2",
+    "@commitlint/config-conventional": "^21.2.0",
     "@gustavoadolfo/minhoteca-core-layer": "^1.0.10",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.0.1",
