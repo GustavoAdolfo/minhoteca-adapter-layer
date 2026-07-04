@@ -1,5 +1,6 @@
 import {
   AttributeValue,
+  BatchGetItemCommand,
   DynamoDBClient,
   QueryCommand,
   QueryInput,
@@ -516,6 +517,43 @@ export class DynamoDBRepository implements RepositoryInterface {
         error as Error
       );
       const resultError = new Error(`Erro ao consultar tabela ${tableName}`);
+      resultError.stack = JSON.stringify(error);
+      throw resultError;
+    }
+  };
+
+  getListByMinhotecaIds = async (collectionName: string, ids: string[]): Promise<ResultType> => {
+    this.logService.info(`📡 Consultando itens por IDs na coleção ${collectionName}...`);
+    try {
+      const keys = ids.map((id) => ({ id: { S: id } }));
+      const cmd = new BatchGetItemCommand({
+        RequestItems: {
+          [collectionName]: {
+            Keys: keys,
+          },
+        },
+      });
+      const content = await this.client.send(cmd);
+      const result = (content.Responses?.[collectionName] ?? []).map((item) => unmarshall(item));
+      this.logService.info(
+        `✅ Consulta por IDs realizada com sucesso em ${collectionName}. Foram retornados ${result.length} item(ns).`
+      );
+      return {
+        data: result,
+        currentPage: 1,
+        totalPages: 1,
+        totalDocuments: result.length,
+        hasNextPage: false,
+        hasPrevPage: false,
+        limit: result.length,
+      };
+    } catch (error: unknown) {
+      this.logService.error(
+        `❌ Erro ao consultar itens por IDs na coleção ${collectionName}`,
+        { ids },
+        error as Error
+      );
+      const resultError = new Error(`Erro ao consultar itens por IDs na coleção ${collectionName}`);
       resultError.stack = JSON.stringify(error);
       throw resultError;
     }

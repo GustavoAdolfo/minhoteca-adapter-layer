@@ -760,4 +760,42 @@ export class MongoDBRepository implements RepositoryInterface {
       throw error;
     }
   }
+
+  async getListByMinhotecaIds(collectionName: string, ids: string[]): Promise<ResultType> {
+    const client = await this.#getConnection();
+
+    const db = client.db(this.mongoDBConfig.database);
+    const collection = db.collection(collectionName);
+
+    try {
+      this.logService.info(
+        `🔍 Iniciando busca de documentos por IDs na collection ${collectionName}...`,
+        { ids }
+      );
+
+      const results = await collection.find({ id: { $in: ids } }).toArray();
+
+      this.logService.info(
+        `✅ Busca de documentos por IDs realizada com sucesso na collection ${collectionName}!`,
+        { foundCount: results.length }
+      );
+
+      return {
+        data: results,
+        currentPage: 1,
+        totalPages: 1,
+        totalDocuments: results.length,
+        hasNextPage: false,
+        hasPrevPage: false,
+        limit: results.length,
+      };
+    } catch (error) {
+      this.logService.error(
+        `❌ Erro ao buscar documentos por IDs na collection ${collectionName}:`,
+        {},
+        error as Error
+      );
+      throw error;
+    }
+  }
 }

@@ -205,6 +205,42 @@ describe('MongoDBRepository', () => {
     expect(result.data).toEqual(testData);
   });
 
+  it('should retrieve list by minhoteca ids successfully', async () => {
+    const ids = ['id-1', 'id-2'];
+    const testData = [
+      { id: 'id-1', name: 'First' },
+      { id: 'id-2', name: 'Second' },
+    ];
+
+    mockCollection.toArray.mockResolvedValueOnce(testData);
+
+    const result = await repository.getListByMinhotecaIds('TestCollection', ids);
+
+    expect(mockCollection.find).toHaveBeenCalledWith({ id: { $in: ids } });
+    expect(result.data).toEqual(testData);
+    expect(result.totalDocuments).toBe(2);
+    expect(result.limit).toBe(2);
+  });
+
+  it('should return empty list when ids array is empty', async () => {
+    mockCollection.toArray.mockResolvedValueOnce([]);
+
+    const result = await repository.getListByMinhotecaIds('TestCollection', []);
+
+    expect(mockCollection.find).toHaveBeenCalledWith({ id: { $in: [] } });
+    expect(result.data).toEqual([]);
+    expect(result.totalDocuments).toBe(0);
+    expect(result.limit).toBe(0);
+  });
+
+  it('should throw error when getListByMinhotecaIds fails', async () => {
+    mockCollection.toArray.mockRejectedValueOnce(new Error('DB Error'));
+
+    await expect(repository.getListByMinhotecaIds('TestCollection', ['id-1'])).rejects.toThrow(
+      'DB Error'
+    );
+  });
+
   describe('Edge Cases e Error Handling', () => {
     it('deve retornar a exata mesma instância caso chamada múltiplas vezes (Singleton)', () => {
       const instance1 = MongoDBRepository.getInstance();

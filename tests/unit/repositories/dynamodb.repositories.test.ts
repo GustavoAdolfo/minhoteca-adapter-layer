@@ -470,4 +470,54 @@ describe('DynamoDBRepository', () => {
       expect(result.data).toEqual([]);
     });
   });
+
+  describe('getListByMinhotecaIds', () => {
+    it('deve consultar itens por IDs com sucesso', async () => {
+      const ids = ['id-1', 'id-2'];
+      mockSend.mockResolvedValueOnce({
+        Responses: {
+          TestCollection: [
+            { id: { S: 'id-1' }, name: { S: 'Primeiro' } },
+            { id: { S: 'id-2' }, name: { S: 'Segundo' } },
+          ],
+        },
+      });
+
+      const result = await repository.getListByMinhotecaIds('TestCollection', ids);
+
+      expect(mockSend).toHaveBeenCalledTimes(1);
+      const command = mockSend.mock.calls[0][0];
+      expect(command.input).toEqual({
+        RequestItems: {
+          TestCollection: {
+            Keys: [{ id: { S: 'id-1' } }, { id: { S: 'id-2' } }],
+          },
+        },
+      });
+      expect(result.data).toEqual([
+        { id: 'id-1', name: 'Primeiro' },
+        { id: 'id-2', name: 'Segundo' },
+      ]);
+      expect(result.totalDocuments).toBe(2);
+      expect(result.limit).toBe(2);
+    });
+
+    it('deve retornar lista vazia quando Responses não vier preenchido', async () => {
+      mockSend.mockResolvedValueOnce({});
+
+      const result = await repository.getListByMinhotecaIds('TestCollection', ['id-1']);
+
+      expect(result.data).toEqual([]);
+      expect(result.totalDocuments).toBe(0);
+      expect(result.limit).toBe(0);
+    });
+
+    it('deve lançar erro em caso de falha no BatchGet', async () => {
+      mockSend.mockRejectedValueOnce(new Error('DB Error'));
+
+      await expect(repository.getListByMinhotecaIds('TestCollection', ['id-1'])).rejects.toThrow(
+        'Erro ao consultar itens por IDs na coleção TestCollection'
+      );
+    });
+  });
 });
