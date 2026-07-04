@@ -460,7 +460,11 @@ export class MongoDBRepository implements RepositoryInterface {
 
         const sort: Record<string, 1 | -1> = {};
         sort[String(finalSortBy)] = direction;
-        query = query.sort(sort);
+        // Usa collation para ordenar ignorando acentuação (ex.: A = Á) e caixa
+        query = query.sort(sort).collation({
+          locale: process.env.MONGODB_SORT_LOCALE || 'pt',
+          strength: 1,
+        });
       }
 
       // Aplicar paginação
@@ -584,7 +588,10 @@ export class MongoDBRepository implements RepositoryInterface {
 
         const sort: Record<string, 1 | -1> = {};
         sort[String(finalSortBy)] = direction;
-        cursor = cursor.sort(sort);
+        cursor = cursor.sort(sort).collation({
+          locale: process.env.MONGODB_SORT_LOCALE || 'pt',
+          strength: 1,
+        });
       }
 
       const results = await cursor.toArray();
@@ -673,7 +680,10 @@ export class MongoDBRepository implements RepositoryInterface {
 
         const sort: Record<string, 1 | -1> = {};
         sort[String(finalSortBy)] = direction;
-        cursor = cursor.sort(sort);
+        cursor = cursor.sort(sort).collation({
+          locale: process.env.MONGODB_SORT_LOCALE || 'pt',
+          strength: 1,
+        });
       }
 
       // Aplicar paginação

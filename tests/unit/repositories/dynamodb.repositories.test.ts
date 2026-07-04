@@ -457,6 +457,45 @@ describe('DynamoDBRepository', () => {
       expect(result.data[0]).toEqual({ id: '123', name: 'test' });
     });
 
+    it('deve ordenar ignorando acentuação e caixa quando sortBy for informado', async () => {
+      mockSend.mockResolvedValueOnce({
+        Items: [
+          { id: { S: '1' }, titulo: { S: 'Óleo' } },
+          { id: { S: '2' }, titulo: { S: 'abacate' } },
+          { id: { S: '3' }, titulo: { S: 'Água' } },
+        ],
+      });
+
+      const result = await repository.getAll('TestTable', { sortBy: 'titulo', sortOrder: 'asc' });
+
+      expect((result.data as Array<{ titulo: string }>).map((item) => item.titulo)).toEqual([
+        'abacate',
+        'Água',
+        'Óleo',
+      ]);
+    });
+
+    it('deve corrigir parâmetros invertidos de ordenação em getAll', async () => {
+      mockSend.mockResolvedValueOnce({
+        Items: [
+          { id: { S: '1' }, titulo: { S: 'Árvore' } },
+          { id: { S: '2' }, titulo: { S: 'Banana' } },
+          { id: { S: '3' }, titulo: { S: 'Abacaxi' } },
+        ],
+      });
+
+      const result = await repository.getAll('TestTable', {
+        sortBy: 'desc',
+        sortOrder: 'titulo',
+      });
+
+      expect((result.data as Array<{ titulo: string }>).map((item) => item.titulo)).toEqual([
+        'Banana',
+        'Árvore',
+        'Abacaxi',
+      ]);
+    });
+
     it('deve lançar erro em caso de falha', async () => {
       mockSend.mockRejectedValueOnce(new Error('DB Error'));
       await expect(repository.getAll('TestTable')).rejects.toThrow(

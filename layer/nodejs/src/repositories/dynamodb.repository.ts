@@ -22,6 +22,12 @@ export class DynamoDBRepository implements RepositoryInterface {
   private client: DynamoDBDocumentClient;
   private logService = new LogService('DynamoDBRepository');
 
+  #normalizeSortValue(value: unknown): string {
+    return String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
   constructor() {
     this.client = DynamoDBDocumentClient.from(
       createClient(SERVICE_TYPE.DYNAMODB) as DynamoDBClient,
@@ -486,7 +492,7 @@ export class DynamoDBRepository implements RepositoryInterface {
     }
   };
 
-  getAll = async <T>(tableName: string): Promise<ResultType> => {
+  getAll = async <T>(tableName: string, options: unknown = {}): Promise<ResultType> => {
     this.logService.info(`📡 Executando Scan (getAll) na tabela ${tableName}...`);
     const scanParameters: {
       TableName: string;
@@ -498,6 +504,41 @@ export class DynamoDBRepository implements RepositoryInterface {
     try {
       const content = await this.client.send(cmd);
       const result = (content.Items ?? []).map((item) => unmarshall(item));
+
+      const sortBy = Object.getOwnPropertyDescriptor(options, 'sortBy')?.value;
+      const sortOrder = Object.getOwnPropertyDescriptor(options, 'sortOrder')?.value ?? 1;
+
+      if (sortBy) {
+        let finalSortBy = String(sortBy);
+        let finalSortOrder = sortOrder;
+
+        const validDirections = ['1', '-1', 'asc', 'desc', 'ascending', 'descending'];
+        if (
+          !validDirections.includes(String(finalSortOrder).toLowerCase()) &&
+          validDirections.includes(String(finalSortBy).toLowerCase())
+        ) {
+          finalSortBy = String(sortOrder);
+          finalSortOrder = sortBy;
+        }
+
+        let direction: 1 | -1 = 1;
+        const dirStr = String(finalSortOrder).toLowerCase();
+        if (dirStr === '-1' || dirStr === 'desc' || dirStr === 'descending') {
+          direction = -1;
+        }
+
+        const locale = process.env.DYNAMODB_SORT_LOCALE || process.env.MONGODB_SORT_LOCALE || 'pt';
+        result.sort((a, b) => {
+          const left = this.#normalizeSortValue((a as Record<string, unknown>)[finalSortBy]);
+          const right = this.#normalizeSortValue((b as Record<string, unknown>)[finalSortBy]);
+          const comparison = left.localeCompare(right, locale, {
+            sensitivity: 'base',
+            numeric: true,
+          });
+          return direction === 1 ? comparison : -comparison;
+        });
+      }
+
       this.logService.info(
         `✅ Scan (getAll) realizado com sucesso em ${tableName}. Foram retornados ${result.length} item(ns).`
       );

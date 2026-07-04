@@ -41,6 +41,7 @@ describe('MongoDBRepository', () => {
       findOneAndUpdate: jest.fn(),
       findOneAndDelete: jest.fn(),
       sort: jest.fn().mockReturnThis(),
+      collation: jest.fn().mockReturnThis(),
       skip: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
     };
@@ -494,6 +495,7 @@ describe('MongoDBRepository', () => {
       });
 
       expect(mockCollection.sort).toHaveBeenCalledWith({ titulo: -1 });
+      expect(mockCollection.collation).toHaveBeenCalledWith({ locale: 'pt', strength: 1 });
       process.env.MONGODB_DEBUG_QUERY = 'false'; // reseta
     });
 
@@ -524,6 +526,7 @@ describe('MongoDBRepository', () => {
 
         expect(mockCollection.find).toHaveBeenCalledWith({}, { projection: { name: 1 } });
         expect(mockCollection.sort).toHaveBeenCalledWith({ titulo: 1 });
+        expect(mockCollection.collation).toHaveBeenCalledWith({ locale: 'pt', strength: 1 });
       });
 
       it('deve consultar documentos (findWithProjection) usando projection objeto e order invertida (desc)', async () => {
@@ -538,6 +541,7 @@ describe('MongoDBRepository', () => {
 
         expect(mockCollection.find).toHaveBeenCalledWith({}, { projection: { name: 1 } });
         expect(mockCollection.sort).toHaveBeenCalledWith({ titulo: -1 });
+        expect(mockCollection.collation).toHaveBeenCalledWith({ locale: 'pt', strength: 1 });
       });
 
       it('deve consultar documentos (findWithProjection) usando projection array e ordenação padrão', async () => {
@@ -547,6 +551,7 @@ describe('MongoDBRepository', () => {
 
         expect(mockCollection.find).toHaveBeenCalledWith({}, { projection: { name: 1 } });
         expect(mockCollection.sort).toHaveBeenCalledWith({ titulo: 1 });
+        expect(mockCollection.collation).toHaveBeenCalledWith({ locale: 'pt', strength: 1 });
       });
 
       it('deve lidar com falhas de DB nos métodos de seleção e projeção', async () => {
