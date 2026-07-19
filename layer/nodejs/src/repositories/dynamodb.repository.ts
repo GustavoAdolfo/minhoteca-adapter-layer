@@ -15,7 +15,7 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
 import { SERVICE_TYPE, createClient } from '../factories/aws-client.factory';
-import { KeyValueAttr, RepositoryInterface, ResultType } from '../interfaces';
+import { GetAllOptions, KeyValueAttr, RepositoryInterface, ResultType } from '../interfaces';
 import { LogService } from '@gustavoadolfo/minhoteca-core-layer';
 
 export class DynamoDBRepository implements RepositoryInterface {
@@ -492,7 +492,7 @@ export class DynamoDBRepository implements RepositoryInterface {
     }
   };
 
-  getAll = async <T>(tableName: string, options: unknown = {}): Promise<ResultType> => {
+  getAll = async <T>(tableName: string, options: GetAllOptions = {}): Promise<ResultType> => {
     this.logService.info(`📡 Executando Scan (getAll) na tabela ${tableName}...`);
     const scanParameters: {
       TableName: string;
@@ -505,8 +505,8 @@ export class DynamoDBRepository implements RepositoryInterface {
       const content = await this.client.send(cmd);
       const result = (content.Items ?? []).map((item) => unmarshall(item));
 
-      const sortBy = Object.getOwnPropertyDescriptor(options, 'sortBy')?.value;
-      const sortOrder = Object.getOwnPropertyDescriptor(options, 'sortOrder')?.value ?? 1;
+      const sortBy = options.sortBy;
+      const sortOrder = options.sortOrder ?? 1;
 
       if (sortBy) {
         let finalSortBy = String(sortBy);
