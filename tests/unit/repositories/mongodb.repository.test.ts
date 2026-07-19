@@ -670,6 +670,20 @@ describe('MongoDBRepository', () => {
           name: { $regex: 'teste\\.\\*\\+\\?', $options: 'i' },
         });
       });
+
+      it('deve usar operador $in quando filterValue for array em getAll', async () => {
+        mockCollection.toArray.mockResolvedValueOnce([]);
+        mockCollection.countDocuments.mockResolvedValueOnce(0);
+
+        await repository.getAll('TestTable', {
+          filterKey: 'categoryId',
+          filterValue: ['c1', 'c2'],
+        });
+
+        expect(mockCollection.find).toHaveBeenCalledWith({
+          categoryId: { $in: ['c1', 'c2'] },
+        });
+      });
     });
   });
 });

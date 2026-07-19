@@ -1,5 +1,5 @@
 import { MongoClient } from 'mongodb';
-import { KeyValueAttr, RepositoryInterface } from '../interfaces';
+import { GetAllOptions, KeyValueAttr, RepositoryInterface } from '../interfaces';
 import { ResultType } from '../interfaces/result.type';
 import { LogService } from '@gustavoadolfo/minhoteca-core-layer';
 
@@ -392,7 +392,7 @@ export class MongoDBRepository implements RepositoryInterface {
     }
   }
 
-  async getAll(tableName: string, options: unknown = {}): Promise<ResultType> {
+  async getAll(tableName: string, options: GetAllOptions = {}): Promise<ResultType> {
     const client = await this.#getConnection();
     this.logService.info(`📡 Consulta (getAll) solicitada na collection ${tableName} com opções:`, {
       options,
@@ -403,22 +403,26 @@ export class MongoDBRepository implements RepositoryInterface {
     const collection = db.collection(tableName);
 
     try {
-      const sortBy = Object.getOwnPropertyDescriptor(options, 'sortBy')?.value;
-      const filterKey = Object.getOwnPropertyDescriptor(options, 'filterKey')?.value;
-      const filterValue = Object.getOwnPropertyDescriptor(options, 'filterValue')?.value;
+      const { sortBy, filterKey, filterValue } = options;
       // Conversão defensiva para garantir que o MongoDB driver receba números estritos
-      const page = Number(Object.getOwnPropertyDescriptor(options, 'page')?.value ?? 0);
-      const limit = Number(Object.getOwnPropertyDescriptor(options, 'limit')?.value ?? 0);
-      const sortOrder = Object.getOwnPropertyDescriptor(options, 'sortOrder')?.value ?? 0;
+      const page = Number(options.page ?? 0);
+      const limit = Number(options.limit ?? 0);
+      const sortOrder = options.sortOrder ?? 0;
       const skip = page > 0 ? (page - 1) * limit : 0;
-      const hasFilter =
-        !!filterKey && filterValue !== undefined && filterValue !== null && `${filterValue}` !== '';
-      const escapedFilterValue = hasFilter
-        ? `${filterValue}`.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        : '';
-      const filterQuery = hasFilter
-        ? { [filterKey]: { $regex: escapedFilterValue, $options: 'i' } }
-        : {};
+      const hasScalarFilterValue =
+        filterValue !== undefined && filterValue !== null && `${filterValue}` !== '';
+      const hasArrayFilterValue = Array.isArray(filterValue) && filterValue.length > 0;
+      const hasFilter = !!filterKey && (hasScalarFilterValue || hasArrayFilterValue);
+
+      let filterQuery: Record<string, unknown> = {};
+      if (hasFilter && filterKey) {
+        if (Array.isArray(filterValue)) {
+          filterQuery = { [filterKey]: { $in: filterValue } };
+        } else {
+          const escapedFilterValue = `${filterValue}`.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          filterQuery = { [filterKey]: { $regex: escapedFilterValue, $options: 'i' } };
+        }
+      }
 
       if (process.env.MONGODB_DEBUG_QUERY === 'true') {
         this.logService.info('[MongoDBRepository.getAll] filterQuery:', {
@@ -447,7 +451,7 @@ export class MongoDBRepository implements RepositoryInterface {
           !validDirections.includes(String(finalSortOrder).toLowerCase()) &&
           validDirections.includes(String(finalSortBy).toLowerCase())
         ) {
-          finalSortBy = sortOrder;
+          finalSortBy = String(sortOrder);
           finalSortOrder = sortBy;
         }
 
