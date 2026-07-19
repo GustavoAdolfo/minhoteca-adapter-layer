@@ -1,6 +1,17 @@
 import { KeyValueAttr } from './dynamodb-attributes.interface';
 import { ResultType } from './result.type';
 
+export type SortOrderOption = 1 | -1 | '1' | '-1' | 'asc' | 'desc' | 'ascending' | 'descending';
+
+export interface GetAllOptions {
+  sortBy?: string;
+  sortOrder?: SortOrderOption | string | number;
+  filterKey?: string;
+  filterValue?: string | number | boolean | string[] | number[];
+  page?: number;
+  limit?: number;
+}
+
 export interface RepositoryInterface {
   saveData(tableName: string, data: Record<string, unknown>): Promise<ResultType>;
   getData(
@@ -15,7 +26,7 @@ export interface RepositoryInterface {
     partKeyName?: string,
     sortKeyName?: string
   ): Promise<ResultType>;
-  getAll(tableName: string, options?: unknown): Promise<ResultType>;
+  getAll(tableName: string, options?: GetAllOptions): Promise<ResultType>;
   updateByMinhotecaId(
     tableName: string,
     data: Record<string, unknown>,
