@@ -80,6 +80,6 @@
     "prettier": "^3.9.5",
     "ts-jest": "^29.4.11",
     "tsc-alias": "^1.9.0",
-    "typescript": "^7.0.2"
+    "typescript": "^6.0.3"
   }
 }
