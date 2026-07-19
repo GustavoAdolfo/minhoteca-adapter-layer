@@ -71,7 +71,7 @@
     "@types/node": "^26.1.1",
     "@typescript-eslint/eslint-plugin": "^8.62.1",
     "@typescript-eslint/parser": "^8.64.0",
-    "commitlint": "^21.2.0",
+    "commitlint": "^21.2.1",
     "dotenv": "^17.4.2",
     "eslint": "^10.7.0",
     "husky": "^9.1.7",
@@ -80,6 +80,6 @@
     "prettier": "^3.9.1",
     "ts-jest": "^29.4.11",
     "tsc-alias": "^1.9.0",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   }
 }
