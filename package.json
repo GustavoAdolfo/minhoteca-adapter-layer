@@ -1,6 +1,6 @@
 {
   "name": "@gustavoadolfo/minhoteca-adapter-layer",
-  "version": "0.1.33",
+  "version": "0.1.35",
   "description": "Camada de adaptadores, repositórios, proxies e outros padrões para solução de demandas do projeto Minhoteca.",
   "main": "layer/nodejs/dist/index.js",
   "types": "layer/nodejs/dist/index.d.ts",
@@ -79,7 +79,7 @@
     "lint-staged": "^17.0.8",
     "prettier": "^3.9.1",
     "ts-jest": "^29.4.11",
-    "tsc-alias": "^1.8.17",
+    "tsc-alias": "^1.9.0",
     "typescript": "^6.0.3"
   }
 }
