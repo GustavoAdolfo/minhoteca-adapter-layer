@@ -684,6 +684,20 @@ describe('MongoDBRepository', () => {
           categoryId: { $in: ['c1', 'c2'] },
         });
       });
+
+      it('deve usar comparação exata quando filterValue for number em getAll', async () => {
+        mockCollection.toArray.mockResolvedValueOnce([]);
+        mockCollection.countDocuments.mockResolvedValueOnce(0);
+
+        await repository.getAll('Autores', {
+          filterKey: 'totalLivros',
+          filterValue: 10,
+        });
+
+        expect(mockCollection.find).toHaveBeenCalledWith({
+          totalLivros: 10,
+        });
+      });
     });
   });
 });
