@@ -418,6 +418,8 @@ export class MongoDBRepository implements RepositoryInterface {
       if (hasFilter && filterKey) {
         if (Array.isArray(filterValue)) {
           filterQuery = { [filterKey]: { $in: filterValue } };
+        } else if (typeof filterValue === 'number') {
+          filterQuery = { [filterKey]: filterValue };
         } else {
           const escapedFilterValue = `${filterValue}`.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
           filterQuery = { [filterKey]: { $regex: escapedFilterValue, $options: 'i' } };
