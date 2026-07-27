@@ -485,7 +485,19 @@ export class MongoDBRepository implements RepositoryInterface {
       const totalPages = limit > 0 ? Math.ceil(totalDocuments / limit) : 1;
 
       this.logService.info(
-        `✅ Consulta (getAll) realizada com sucesso em ${tableName}. Foram retornados ${results.length} documento(s).`
+        `✅ Consulta (getAll) realizada com sucesso em ${tableName}. Foram retornados ${results.length} documento(s).`,
+        {
+          page,
+          limit,
+          totalDocuments,
+          filterKey,
+          filterValue,
+          sortBy,
+          sortOrder,
+        },
+        {
+          results,
+        }
       );
       return {
         data: results,
