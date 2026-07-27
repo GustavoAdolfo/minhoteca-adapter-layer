@@ -61,7 +61,7 @@
   "devDependencies": {
     "@aws-sdk/client-dynamodb": "^3.1090.0",
     "@aws-sdk/client-s3": "^3.1079.0",
-    "@aws-sdk/lib-dynamodb": "^3.1079.0",
+    "@aws-sdk/lib-dynamodb": "^3.1090.0",
     "@aws-sdk/node-http-handler": "^3.374.0",
     "@aws-sdk/s3-request-presigner": "^3.1090.0",
     "@commitlint/cli": "^21.2.0",
@@ -69,7 +69,7 @@
     "@gustavoadolfo/minhoteca-core-layer": "^1.0.10",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.1.1",
-    "@typescript-eslint/eslint-plugin": "^8.62.1",
+    "@typescript-eslint/eslint-plugin": "^8.65.0",
     "@typescript-eslint/parser": "^8.64.0",
     "commitlint": "^21.2.1",
     "dotenv": "^17.4.2",
@@ -80,6 +80,6 @@
     "prettier": "^3.9.5",
     "ts-jest": "^29.4.11",
     "tsc-alias": "^1.9.0",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   }
 }
