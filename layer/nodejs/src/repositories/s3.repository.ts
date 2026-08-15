@@ -26,20 +26,25 @@ export class S3Repository {
     contentType: string,
     forcePathStyle = false
   ): Promise<string> {
+    const effectiveContentType = contentType?.trim() || 'application/octet-stream';
+
     this.logService.info(
       `🔗 Gerando URL pré-assinada (PUT) para o arquivo ${objectName} no bucket ${bucketName}...`,
-      { contentType, forcePathStyle }
+      { contentType: effectiveContentType, forcePathStyle }
     );
     try {
       const command = new PutObjectCommand({
         Bucket: bucketName,
         Key: objectName,
-        ContentType: contentType,
+        ContentType: effectiveContentType,
       });
+
+      const signingClient = this.client;
       if (forcePathStyle) {
-        this.client.config.forcePathStyle = true;
+        signingClient.config.forcePathStyle = true;
       }
-      const url = await getSignedUrl(this.client, command, {
+
+      const url = await getSignedUrl(signingClient, command, {
         expiresIn: 60 * 60,
       });
       this.logService.info(`✅ URL pré-assinada (PUT) gerada com sucesso para ${objectName}!`);
@@ -60,20 +65,25 @@ export class S3Repository {
     contentType: string,
     forcePathStyle = false
   ): Promise<string> {
+    const effectiveContentType = contentType?.trim() || 'application/octet-stream';
+
     this.logService.info(
       `🔗 Gerando URL pré-assinada (GET) para o arquivo ${objectName} no bucket ${bucketName}...`,
-      { contentType, forcePathStyle }
+      { contentType: effectiveContentType, forcePathStyle }
     );
     try {
       const command = new GetObjectCommand({
         Bucket: bucketName,
         Key: objectName,
-        ResponseContentType: contentType,
+        ResponseContentType: effectiveContentType,
       });
+
+      const signingClient = this.client;
       if (forcePathStyle) {
-        this.client.config.forcePathStyle = true;
+        signingClient.config.forcePathStyle = true;
       }
-      const url = await getSignedUrl(this.client, command, {
+
+      const url = await getSignedUrl(signingClient, command, {
         expiresIn: 7 * 24 * 60 * 60,
       });
       this.logService.info(`✅ URL pré-assinada (GET) gerada com sucesso para ${objectName}!`);
