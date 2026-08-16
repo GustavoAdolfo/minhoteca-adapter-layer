@@ -599,4 +599,55 @@ export class DynamoDBRepository implements RepositoryInterface {
       throw resultError;
     }
   };
+
+  async getCountFromTable(
+    tableName: string,
+    filterKey?: string,
+    filterValue?: string | number | boolean
+  ): Promise<ResultType> {
+    this.logService.info(`📊 Contando itens na tabela ${tableName}...`, { filterKey, filterValue });
+    const scanParameters: {
+      TableName: string;
+      FilterExpression?: string;
+      ExpressionAttributeValues?: Record<string, AttributeValue>;
+    } = {
+      TableName: tableName,
+    };
+
+    if (filterKey && filterValue !== undefined) {
+      scanParameters.FilterExpression = `${filterKey} = :filterValue`;
+      scanParameters.ExpressionAttributeValues = {
+        ':filterValue': {
+          S: String(filterValue),
+        },
+      };
+    }
+
+    const cmd = new ScanCommand(scanParameters);
+    try {
+      const content = await this.client.send(cmd);
+      const result = content.Count ?? 0;
+      this.logService.info(
+        `✅ Contagem realizada com sucesso em ${tableName}. Foram retornados ${result} item(ns).`
+      );
+      return {
+        data: [{ count: result }],
+        currentPage: 1,
+        totalPages: 1,
+        totalDocuments: 1,
+        hasNextPage: false,
+        hasPrevPage: false,
+        limit: 1,
+      };
+    } catch (error: unknown) {
+      this.logService.error(
+        `❌ Erro ao contar itens na tabela ${tableName}`,
+        { filterKey, filterValue },
+        error as Error
+      );
+      const resultError = new Error(`Erro ao contar itens na tabela ${tableName}`);
+      resultError.stack = JSON.stringify(error);
+      throw resultError;
+    }
+  }
 }
