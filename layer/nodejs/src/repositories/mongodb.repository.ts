@@ -826,4 +826,51 @@ export class MongoDBRepository implements RepositoryInterface {
       throw error;
     }
   }
+
+  async getCountFromTable(
+    tableName: string,
+    filterKey?: string,
+    filterValue?: string | number | boolean
+  ): Promise<ResultType> {
+    const client = await this.#getConnection();
+
+    const db = client.db(this.mongoDBConfig.database);
+    const collection = db.collection(tableName);
+
+    try {
+      this.logService.info(
+        `🔢 Iniciando contagem de documentos na collection ${tableName} com filtro:`,
+        { filterKey, filterValue }
+      );
+
+      let filterQuery: Record<string, unknown> = {};
+      if (filterKey && filterValue !== undefined) {
+        filterQuery[filterKey] = filterValue;
+      }
+
+      const count = await collection.countDocuments(filterQuery);
+
+      this.logService.info(
+        `✅ Contagem de documentos realizada com sucesso na collection ${tableName}!`,
+        { count }
+      );
+
+      return {
+        data: { count },
+        currentPage: 1,
+        totalPages: 1,
+        totalDocuments: count,
+        hasNextPage: false,
+        hasPrevPage: false,
+        limit: 0,
+      };
+    } catch (error) {
+      this.logService.error(
+        `❌ Erro ao contar documentos na collection ${tableName}:`,
+        {},
+        error as Error
+      );
+      throw error;
+    }
+  }
 }

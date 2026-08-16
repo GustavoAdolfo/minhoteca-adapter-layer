@@ -698,6 +698,52 @@ describe('MongoDBRepository', () => {
           totalLivros: 10,
         });
       });
+
+      describe('getCountFromTable', () => {
+        it('deve contar todos os documentos quando nenhum filtro for informado', async () => {
+          mockCollection.countDocuments.mockResolvedValueOnce(7);
+
+          const result = await repository.getCountFromTable('TestTable');
+
+          expect(mockCollection.countDocuments).toHaveBeenCalledWith({});
+          expect(result).toEqual({
+            data: { count: 7 },
+            currentPage: 1,
+            totalPages: 1,
+            totalDocuments: 7,
+            hasNextPage: false,
+            hasPrevPage: false,
+            limit: 0,
+          });
+        });
+
+        it.each([
+          ['string', 'status', 'active'],
+          ['number', 'totalLivros', 10],
+          ['boolean', 'available', true],
+        ])(
+          'deve contar documentos usando filtro com valor do tipo %s',
+          async (_valueType, filterKey, filterValue) => {
+            mockCollection.countDocuments.mockResolvedValueOnce(3);
+
+            const result = await repository.getCountFromTable('TestTable', filterKey, filterValue);
+
+            expect(mockCollection.countDocuments).toHaveBeenCalledWith({
+              [filterKey]: filterValue,
+            });
+            expect(result.data).toEqual({ count: 3 });
+            expect(result.totalDocuments).toBe(3);
+          }
+        );
+
+        it('deve propagar erro ao contar documentos', async () => {
+          mockCollection.countDocuments.mockRejectedValueOnce(new Error('Count Error'));
+
+          await expect(
+            repository.getCountFromTable('TestTable', 'status', 'active')
+          ).rejects.toThrow('Count Error');
+        });
+      });
     });
   });
 });
