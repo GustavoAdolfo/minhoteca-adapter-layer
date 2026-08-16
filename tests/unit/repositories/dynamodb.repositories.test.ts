@@ -510,6 +510,68 @@ describe('DynamoDBRepository', () => {
     });
   });
 
+  describe('getCountFromTable', () => {
+    it('deve contar itens sem aplicar filtro', async () => {
+      mockSend.mockResolvedValueOnce({ Count: 7 });
+
+      const result = await repository.getCountFromTable('TestTable');
+
+      expect(mockSend).toHaveBeenCalledTimes(1);
+      expect(mockSend.mock.calls[0][0].input).toEqual({
+        TableName: 'TestTable',
+      });
+      expect(result).toEqual({
+        data: [{ count: 7 }],
+        currentPage: 1,
+        totalPages: 1,
+        totalDocuments: 1,
+        hasNextPage: false,
+        hasPrevPage: false,
+        limit: 1,
+      });
+    });
+
+    it.each([
+      ['string', 'status', 'active'],
+      ['number', 'totalLivros', 10],
+      ['boolean', 'available', true],
+      ['zero', 'totalLivros', 0],
+      ['false', 'available', false],
+    ])(
+      'deve contar itens usando filtro com valor %s',
+      async (_valueType, filterKey, filterValue) => {
+        mockSend.mockResolvedValueOnce({ Count: 3 });
+
+        const result = await repository.getCountFromTable('TestTable', filterKey, filterValue);
+
+        expect(mockSend.mock.calls[0][0].input).toEqual({
+          TableName: 'TestTable',
+          FilterExpression: `${filterKey} = :filterValue`,
+          ExpressionAttributeValues: {
+            ':filterValue': { S: String(filterValue) },
+          },
+        });
+        expect(result.data).toEqual([{ count: 3 }]);
+      }
+    );
+
+    it('deve usar zero quando a resposta não informar Count', async () => {
+      mockSend.mockResolvedValueOnce({});
+
+      const result = await repository.getCountFromTable('TestTable');
+
+      expect(result.data).toEqual([{ count: 0 }]);
+    });
+
+    it('deve lançar erro quando a contagem falhar', async () => {
+      mockSend.mockRejectedValueOnce(new Error('Count Error'));
+
+      await expect(repository.getCountFromTable('TestTable', 'status', 'active')).rejects.toThrow(
+        'Erro ao contar itens na tabela TestTable'
+      );
+    });
+  });
+
   describe('getListByMinhotecaIds', () => {
     it('deve consultar itens por IDs com sucesso', async () => {
       const ids = ['id-1', 'id-2'];
