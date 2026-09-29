@@ -2,6 +2,9 @@ import { NodeHttpHandler } from '@aws-sdk/node-http-handler';
 import { Agent } from 'http';
 import { S3Client, S3ClientConfig } from '@aws-sdk/client-s3';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { SQSClient } from '@aws-sdk/client-sqs';
+import { SESClient } from '@aws-sdk/client-ses';
+import { SNSClient } from '@aws-sdk/client-sns';
 import { LogService } from '@gustavoadolfo/minhoteca-core-layer';
 
 const DEFAULT_REGION: string = 'us-east-1';
@@ -25,9 +28,14 @@ const optionsConfiguration = () => {
 export enum SERVICE_TYPE {
   DYNAMODB = 'DYNAMODB',
   S3 = 'S3',
+  SQS = 'SQS',
+  SES = 'SES',
+  SNS = 'SNS',
 }
 
-export function createClient(service: SERVICE_TYPE): S3Client | DynamoDBClient | null {
+export function createClient(
+  service: SERVICE_TYPE
+): S3Client | DynamoDBClient | SQSClient | SESClient | SNSClient | null {
   try {
     const options = optionsConfiguration();
     const localS3Endpoint =
@@ -49,6 +57,12 @@ export function createClient(service: SERVICE_TYPE): S3Client | DynamoDBClient |
         return new S3Client(optionsS3);
       case SERVICE_TYPE.DYNAMODB:
         return new DynamoDBClient(options);
+      case SERVICE_TYPE.SQS:
+        return new SQSClient(options);
+      case SERVICE_TYPE.SES:
+        return new SESClient(options);
+      case SERVICE_TYPE.SNS:
+        return new SNSClient(options);
       default:
         return null;
     }
