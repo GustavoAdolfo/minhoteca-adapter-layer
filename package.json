@@ -1,6 +1,6 @@
 {
   "name": "@gustavoadolfo/minhoteca-adapter-layer",
-  "version": "0.1.61",
+  "version": "0.1.63",
   "description": "Camada de adaptadores, repositórios, proxies e outros padrões para solução de demandas do projeto Minhoteca.",
   "main": "layer/nodejs/dist/index.js",
   "types": "layer/nodejs/dist/index.d.ts",
@@ -64,7 +64,7 @@
     "@aws-sdk/client-ses": "^3.1142.0",
     "@aws-sdk/client-sns": "^3.1142.0",
     "@aws-sdk/client-sqs": "^3.1142.0",
-    "@aws-sdk/lib-dynamodb": "^3.1130.0",
+    "@aws-sdk/lib-dynamodb": "^3.1141.0",
     "@aws-sdk/node-http-handler": "^3.374.0",
     "@aws-sdk/s3-request-presigner": "^3.1130.0",
     "@commitlint/cli": "^21.2.2",
