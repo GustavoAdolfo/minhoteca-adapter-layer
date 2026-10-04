@@ -14,7 +14,7 @@ export class SNSFacade {
   /**
    *
    */
-  constructor() {
+  constructor(private idExecucao: string) {
     this.client = createClient(SERVICE_TYPE.SNS) as SNSClient;
     this.logService.info('✅ Cliente SNS configurado e inicializado');
   }
@@ -24,6 +24,11 @@ export class SNSFacade {
     messageBody: string,
     messageAttributes?: Record<string, MessageAttributeValue>
   ): Promise<PublishCommandOutput> {
+    this.logService.info(
+      `Enviando mensagem para o tópico ${topicArn}`,
+      { idExecucao: this.idExecucao },
+      { messageBody }
+    );
     const command = new PublishCommand({
       TopicArn: topicArn,
       Message: messageBody,
