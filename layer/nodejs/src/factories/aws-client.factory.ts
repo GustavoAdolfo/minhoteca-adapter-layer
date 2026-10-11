@@ -5,6 +5,10 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { SQSClient } from '@aws-sdk/client-sqs';
 import { SESClient } from '@aws-sdk/client-ses';
 import { SNSClient } from '@aws-sdk/client-sns';
+import {
+  CognitoIdentityProviderClient,
+  CognitoIdentityProviderClientConfig,
+} from '@aws-sdk/client-cognito-identity-provider';
 import { LogService } from '@gustavoadolfo/minhoteca-core-layer';
 
 const DEFAULT_REGION: string = 'us-east-1';
@@ -31,11 +35,19 @@ export enum SERVICE_TYPE {
   SQS = 'SQS',
   SES = 'SES',
   SNS = 'SNS',
+  COGNITO = 'COGNITO',
 }
 
 export function createClient(
   service: SERVICE_TYPE
-): S3Client | DynamoDBClient | SQSClient | SESClient | SNSClient | null {
+):
+  | S3Client
+  | DynamoDBClient
+  | SQSClient
+  | SESClient
+  | SNSClient
+  | CognitoIdentityProviderClient
+  | null {
   try {
     const options = optionsConfiguration();
     const localS3Endpoint =
@@ -63,6 +75,11 @@ export function createClient(
         return new SESClient(options);
       case SERVICE_TYPE.SNS:
         return new SNSClient(options);
+      case SERVICE_TYPE.COGNITO:
+        const optionsCognito: CognitoIdentityProviderClientConfig = {
+          ...options,
+        };
+        return new CognitoIdentityProviderClient(optionsCognito);
       default:
         return null;
     }
