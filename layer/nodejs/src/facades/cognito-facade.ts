@@ -46,9 +46,7 @@ export class CognitoFacade {
 
   async getUserAttributes(token: string): Promise<GetUserCommandOutput> {
     return this.execute('getUserAttributes', () =>
-      this.client.send(
-        new GetUserCommand({ AccessToken: this.requireValue(token, 'AccessToken') })
-      )
+      this.client.send(new GetUserCommand({ AccessToken: this.requireValue(token, 'AccessToken') }))
     );
   }
 

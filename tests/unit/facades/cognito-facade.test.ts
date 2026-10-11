@@ -183,16 +183,13 @@ describe('CognitoFacade', () => {
     { invalidAttributes: [] as AttributeType[] },
     { invalidAttributes: [{ Value: 'value' }] as unknown as AttributeType[] },
     { invalidAttributes: [{ Name: 'name' }] as unknown as AttributeType[] },
-  ])(
-    'logs and rejects invalid attributes: $invalidAttributes',
-    async ({ invalidAttributes }) => {
-      await expect(
-        facade.adminUpdateUserAttributes('user-sub', invalidAttributes)
-      ).rejects.toThrow('UserAttributes');
-      expect(mockSend).not.toHaveBeenCalled();
-      expect((LogService as jest.Mock).mock.results[0].value.error).toHaveBeenCalled();
-    }
-  );
+  ])('logs and rejects invalid attributes: $invalidAttributes', async ({ invalidAttributes }) => {
+    await expect(facade.adminUpdateUserAttributes('user-sub', invalidAttributes)).rejects.toThrow(
+      'UserAttributes'
+    );
+    expect(mockSend).not.toHaveBeenCalled();
+    expect((LogService as jest.Mock).mock.results[0].value.error).toHaveBeenCalled();
+  });
 
   it('can set a permanent password without logging the password', async () => {
     mockSend.mockResolvedValue({});
@@ -203,7 +200,9 @@ describe('CognitoFacade', () => {
   });
 
   it('does not log access tokens or returned user attributes', async () => {
-    mockSend.mockResolvedValue({ UserAttributes: [{ Name: 'email', Value: 'private@example.com' }] });
+    mockSend.mockResolvedValue({
+      UserAttributes: [{ Name: 'email', Value: 'private@example.com' }],
+    });
     await facade.getUserAttributes('private-token');
     const logs = (LogService as jest.Mock).mock.results[0].value;
     expect(JSON.stringify(logs.info.mock.calls)).not.toContain('private-token');
