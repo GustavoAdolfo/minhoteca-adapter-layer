@@ -55,6 +55,65 @@ console.log(item.data);
 
 ## 📚 Documentação
 
+### Administração de usuários Cognito
+
+`CognitoFacade` centraliza operações do user pool. Configure `USER_POOL_ID`,
+`AWS_REGION` e credenciais AWS no backend; a role precisa das permissões IAM
+`cognito-idp` correspondentes aos comandos utilizados. Não exponha esta facade
+no frontend: autorize cada operação administrativa no serviço que a utiliza.
+
+```typescript
+import { CognitoFacade } from '@gustavoadolfo/minhoteca-adapter-layer';
+
+const cognito = new CognitoFacade('id-da-execucao');
+await cognito.adminUpdateUserAttributes('username-ou-sub', [
+  { Name: 'name', Value: 'Nome atualizado' },
+  { Name: 'custom:bibliotecaId', Value: 'biblioteca-123' },
+]);
+await cognito.adminDisableUser('username-ou-sub');
+await cognito.adminEnableUser('username-ou-sub');
+
+const users = await cognito.listUsers();
+const page = await cognito.listUsersPage({
+  Limit: 20,
+  Filter: 'status = "Enabled"',
+});
+if (page.PaginationToken) {
+  await cognito.listUsersPage({
+    Limit: 20,
+    Filter: 'status = "Enabled"',
+    PaginationToken: page.PaginationToken,
+  });
+}
+```
+
+- `getUserAttributes(accessToken)` consulta o usuário autenticado; as operações
+  administrativas usam `Username` aceito pelo Cognito (inclusive `sub` quando
+  permitido pelo pool), sem exigir o token do usuário.
+- `adminGetUserAttributes(username)` consulta atributos e estado do usuário.
+- `adminUpdateUserAttributes(username, attributes)` edita atributos padrão e
+  personalizados mutáveis já definidos no schema. Use o prefixo `custom:` para
+  atributos personalizados. O schema do pool e o atributo `sub` não são editados.
+  Um valor vazio remove o valor do atributo, conforme as regras do Cognito.
+  A assinatura legada `(username, region, attributes)` continua aceita, mas
+  `region` não altera a região do cliente; use `AWS_REGION`.
+- `listUsers(options?)` percorre todas as páginas e retorna um array, incluindo
+  usuários desabilitados e todos os atributos por padrão. `Filter`,
+  `AttributesToGet`, `Limit` (tamanho de página, não limite total) e
+  `PaginationToken` inicial são opcionais. `listUsersPage(options?)` retorna
+  uma única resposta do SDK com o token para a próxima página.
+- `adminSetUserPassword(username, password, permanent = false)` define uma senha
+  temporária por padrão; passe `true` para uma senha permanente.
+- `adminResetUserPassword(username)` inicia o fluxo de redefinição do Cognito
+  (exige um canal de recuperação verificado e a configuração de entrega do pool).
+- `adminConfirmSignUp(username)` confirma o cadastro, sem verificar automaticamente
+  o email ou telefone.
+- `adminUserGlobalSignOut(username)` invalida as sessões no Cognito. Validadores
+  locais de JWT podem aceitar tokens já emitidos até sua expiração.
+
+Erros de configuração, validação e SDK são registrados e propagados ao chamador.
+Tokens, senhas e respostas com atributos não são registrados pela facade.
+
 - **[Arquitetura e Conceitos](./docs/ARCHITECTURE.md)** - Domain-Driven Design, Entities, Value Objects
 - **[Exemplos Práticos](./docs/EXAMPLES.md)** - Código real para diferentes cenários
 - **[Deploy em Lambda Layer](./docs/LAMBDA_LAYER_DEPLOYMENT.md)** - Guia passo-a-passo para AWS
