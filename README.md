@@ -55,6 +55,16 @@ console.log(item.data);
 
 ## 📚 Documentação
 
+### Listagem completa no DynamoDB
+
+`DynamoDBRepository.getAll` percorre todas as páginas do Scan usando
+`LastEvaluatedKey` como `ExclusiveStartKey`, inclusive páginas intermediárias
+sem itens. A ordenação é aplicada após reunir os registros, e `totalDocuments`
+conta todos eles. Falhas em qualquer página são propagadas, sem retornar uma
+lista parcial como sucesso. A resposta continua sendo uma única lista em
+`data`; este método não aplica paginação por `page`/`limit`.
+Recompile e publique a layer para que as Lambdas recebam este comportamento.
+
 ### Administração de usuários Cognito
 
 `CognitoFacade` centraliza operações do user pool. Configure `USER_POOL_ID`,

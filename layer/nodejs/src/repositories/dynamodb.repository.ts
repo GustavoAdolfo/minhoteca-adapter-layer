@@ -500,10 +500,19 @@ export class DynamoDBRepository implements RepositoryInterface {
       TableName: tableName,
     };
 
-    const cmd = new ScanCommand(scanParameters);
     try {
-      const content = await this.client.send(cmd);
-      const result = (content.Items ?? []).map((item) => unmarshall(item));
+      const result: Record<string, unknown>[] = [];
+      let exclusiveStartKey: Record<string, AttributeValue> | undefined;
+      do {
+        const content = await this.client.send(
+          new ScanCommand({
+            ...scanParameters,
+            ExclusiveStartKey: exclusiveStartKey,
+          })
+        );
+        result.push(...(content.Items ?? []).map((item) => unmarshall(item)));
+        exclusiveStartKey = content.LastEvaluatedKey;
+      } while (exclusiveStartKey && Object.keys(exclusiveStartKey).length > 0);
 
       const sortBy = options.sortBy;
       const sortOrder = options.sortOrder ?? 1;
