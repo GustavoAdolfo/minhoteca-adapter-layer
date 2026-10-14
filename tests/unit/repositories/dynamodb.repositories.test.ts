@@ -450,6 +450,39 @@ describe('DynamoDBRepository', () => {
   });
 
   describe('getAll', () => {
+    it('percorre todas as páginas do Scan antes de ordenar e contar', async () => {
+      const lastKey = { id: { S: '1' } };
+      mockSend
+        .mockResolvedValueOnce({
+          Items: [{ id: { S: '1' }, prazoDias: { N: '7' }, nome: { S: 'Zulu' } }],
+          LastEvaluatedKey: lastKey,
+        })
+        .mockResolvedValueOnce({ Items: [], LastEvaluatedKey: { id: { S: '2' } } })
+        .mockResolvedValueOnce({
+          Items: [{ id: { S: '3' }, nome: { S: 'Alpha' }, situacao: { NULL: true } }],
+        });
+      const result = await repository.getAll('TestTable', { sortBy: 'nome', sortOrder: 'asc' });
+      expect(mockSend).toHaveBeenCalledTimes(3);
+      expect(mockSend.mock.calls[1][0].input.ExclusiveStartKey).toEqual(lastKey);
+      expect(result.data).toEqual([
+        { id: '3', nome: 'Alpha', situacao: null },
+        { id: '1', nome: 'Zulu', prazoDias: 7 },
+      ]);
+      expect(result.totalDocuments).toBe(2);
+    });
+
+    it('propaga falha em páginas posteriores sem retornar dados parciais', async () => {
+      mockSend
+        .mockResolvedValueOnce({
+          Items: [{ id: { S: '1' } }],
+          LastEvaluatedKey: { id: { S: '1' } },
+        })
+        .mockRejectedValueOnce(new Error('offline'));
+      await expect(repository.getAll('TestTable')).rejects.toThrow(
+        'Erro ao consultar tabela TestTable'
+      );
+    });
+
     it('deve retornar dados mapeados (unmarshall) com sucesso', async () => {
       mockSend.mockResolvedValueOnce({ Items: [{ id: { S: '123' }, name: { S: 'test' } }] });
       const result = await repository.getAll('TestTable');
