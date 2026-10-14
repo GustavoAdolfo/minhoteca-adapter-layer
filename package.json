@@ -75,7 +75,7 @@
     "@gustavoadolfo/minhoteca-core-layer": "^1.0.58",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.6.4",
-    "@typescript-eslint/eslint-plugin": "^8.65.0",
+    "@typescript-eslint/eslint-plugin": "^8.71.1",
     "@typescript-eslint/parser": "^8.64.0",
     "commitlint": "^21.2.3",
     "dotenv": "^18.0.6",
